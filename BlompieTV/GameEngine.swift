@@ -1,0 +1,798 @@
+//
+//  GameEngine.swift
+//  BlompieTV
+//
+//  Core game logic for the text adventure
+//  Created by Jordan Koch on 2/2/2026.
+//  Copyright 2026 Jordan Koch. All rights reserved.
+//
+
+import Foundation
+import SwiftUI
+
+struct GameMessage: Identifiable, Codable {
+    let id: UUID
+    let text: String
+    let timestamp: Date
+
+    init(text: String) {
+        self.id = UUID()
+        self.text = text
+        self.timestamp = Date()
+    }
+}
+
+struct GameState: Codable {
+    var messages: [GameMessage]
+    var conversationHistory: [OllamaMessage]
+    var currentActions: [String]
+    var slotName: String
+    var savedDate: Date
+}
+
+struct SaveSlot: Identifiable, Codable {
+    let id: String
+    let name: String
+    let savedDate: Date
+    var messageCount: Int
+}
+
+enum DetailLevel: String, Codable, CaseIterable {
+    case brief = "Brief"
+    case normal = "Normal"
+    case detailed = "Detailed"
+}
+
+enum ToneStyle: String, Codable, CaseIterable {
+    case serious = "Serious"
+    case balanced = "Balanced"
+    case whimsical = "Whimsical"
+}
+
+struct GameSnapshot: Codable {
+    let messages: [GameMessage]
+    let conversationHistory: [OllamaMessage]
+    let currentActions: [String]
+}
+
+struct Achievement: Identifiable, Codable {
+    let id: String
+    let title: String
+    let description: String
+    var isUnlocked: Bool
+    let unlockDate: Date?
+}
+
+@MainActor
+class GameEngine: ObservableObject {
+    @Published var messages: [GameMessage] = []
+    @Published var currentActions: [String] = []
+    @Published var isLoading: Bool = false
+    @Published var streamingText: String = ""
+    @Published var selectedModel: String = "mistral"
+    @Published var availableModels: [String] = []
+
+    // Settings
+    @Published var fontSize: Double = 32 // Larger for TV
+    @Published var streamingEnabled: Bool = true
+    @Published var temperature: Double = 1.3
+    @Published var detailLevel: DetailLevel = .normal
+    @Published var toneStyle: ToneStyle = .balanced
+    @Published var autoSaveEnabled: Bool = true
+
+    // Gameplay tracking
+    @Published var actionHistory: [String] = []
+    @Published var metNPCs: [String] = []
+    @Published var inventory: [String] = []
+    @Published var locationHistory: [String] = []
+    @Published var achievements: [Achievement] = []
+    @Published var lastTokensPerSecond: Double = 0.0
+    @Published var randomModelMode: Bool = false
+    @Published var actionsUntilModelSwitch: Int = 5
+
+    // Error display
+    @Published var errorMessage: String = ""
+    @Published var showError: Bool = false
+
+    var stateHistory: [GameSnapshot] = []
+    private var actionsSinceModelSwitch: Int = 0
+
+    private var conversationHistory: [OllamaMessage] = []
+    let ollamaService = OllamaService()
+
+    init() {
+        loadSettings()
+        initializeAchievements()
+        Task {
+            await refreshAvailableModels()
+        }
+    }
+
+    func refreshAvailableModels() async {
+        do {
+            let models = try await ollamaService.fetchInstalledModels()
+            availableModels = models.isEmpty ? ["mistral", "llama3.2", "llama3.1", "codellama", "phi"] : models
+        } catch {
+            availableModels = ["mistral", "llama3.2", "llama3.1", "codellama", "phi"]
+        }
+    }
+
+    func saveSettings() {
+        UserDefaults.standard.set(fontSize, forKey: "BlompieTVFontSize")
+        UserDefaults.standard.set(streamingEnabled, forKey: "BlompieTVStreamingEnabled")
+        UserDefaults.standard.set(temperature, forKey: "BlompieTVTemperature")
+        UserDefaults.standard.set(detailLevel.rawValue, forKey: "BlompieTVDetailLevel")
+        UserDefaults.standard.set(toneStyle.rawValue, forKey: "BlompieTVToneStyle")
+        UserDefaults.standard.set(autoSaveEnabled, forKey: "BlompieTVAutoSaveEnabled")
+        UserDefaults.standard.set(selectedModel, forKey: "BlompieTVSelectedModel")
+        UserDefaults.standard.set(randomModelMode, forKey: "BlompieTVRandomModelMode")
+        UserDefaults.standard.set(actionsUntilModelSwitch, forKey: "BlompieTVActionsUntilModelSwitch")
+    }
+
+    private func loadSettings() {
+        fontSize = UserDefaults.standard.double(forKey: "BlompieTVFontSize")
+        if fontSize == 0 { fontSize = 32 } // Larger for TV
+
+        streamingEnabled = UserDefaults.standard.object(forKey: "BlompieTVStreamingEnabled") as? Bool ?? true
+        temperature = UserDefaults.standard.double(forKey: "BlompieTVTemperature")
+        if temperature == 0 { temperature = 1.3 }
+
+        if let detailStr = UserDefaults.standard.string(forKey: "BlompieTVDetailLevel"),
+           let detail = DetailLevel(rawValue: detailStr) {
+            detailLevel = detail
+        }
+
+        if let toneStr = UserDefaults.standard.string(forKey: "BlompieTVToneStyle"),
+           let tone = ToneStyle(rawValue: toneStr) {
+            toneStyle = tone
+        }
+
+        autoSaveEnabled = UserDefaults.standard.object(forKey: "BlompieTVAutoSaveEnabled") as? Bool ?? true
+        randomModelMode = UserDefaults.standard.object(forKey: "BlompieTVRandomModelMode") as? Bool ?? false
+
+        let savedSwitchCount = UserDefaults.standard.integer(forKey: "BlompieTVActionsUntilModelSwitch")
+        if savedSwitchCount > 0 {
+            actionsUntilModelSwitch = savedSwitchCount
+        }
+
+        if let model = UserDefaults.standard.string(forKey: "BlompieTVSelectedModel") {
+            selectedModel = model
+        }
+    }
+
+    func resetSettings() {
+        fontSize = 32
+        streamingEnabled = true
+        temperature = 1.3
+        detailLevel = .normal
+        toneStyle = .balanced
+        autoSaveEnabled = true
+        randomModelMode = false
+        actionsUntilModelSwitch = 5
+        selectedModel = "mistral"
+        saveSettings()
+    }
+
+    // MARK: - Stats
+
+    func getStats() -> [String: String] {
+        return [
+            "Total Actions": "\(actionHistory.count)",
+            "NPCs Met": "\(metNPCs.count)",
+            "Items Collected": "\(inventory.count)",
+            "Locations Visited": "\(locationHistory.count)",
+            "Achievements": "\(achievements.filter { $0.isUnlocked }.count)/\(achievements.count)",
+            "Current Model": selectedModel,
+            "Last Token/sec": lastTokensPerSecond > 0 ? String(format: "%.1f", lastTokensPerSecond) : "N/A",
+            "Saves": "\(getSaveSlots().count)",
+            "Messages": "\(messages.count)"
+        ]
+    }
+
+    func deleteAllSaves() {
+        let slots = getSaveSlots()
+        for slot in slots {
+            deleteSaveSlot(slot.id)
+        }
+        messages = []
+        conversationHistory = []
+        currentActions = []
+    }
+
+    // MARK: - Achievements
+
+    private func initializeAchievements() {
+        achievements = [
+            Achievement(id: "first_step", title: "First Steps", description: "Take your first action", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "explorer", title: "Explorer", description: "Visit 5 different locations", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "world_traveler", title: "World Traveler", description: "Visit 20 different locations", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "social", title: "Social Butterfly", description: "Meet 5 NPCs", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "diplomat", title: "Diplomat", description: "Meet 15 NPCs", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "collector", title: "Collector", description: "Acquire 5 items", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "hoarder", title: "Hoarder", description: "Acquire 15 items", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "conversationalist", title: "Conversationalist", description: "Take 50 actions", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "veteran", title: "Veteran Adventurer", description: "Take 200 actions", isUnlocked: false, unlockDate: nil),
+            Achievement(id: "trader", title: "Trader", description: "Complete 5 trades", isUnlocked: false, unlockDate: nil),
+        ]
+        loadAchievements()
+    }
+
+    private func checkAchievements() {
+        var changed = false
+
+        // First action
+        if !achievements[0].isUnlocked && actionHistory.count >= 1 {
+            unlockAchievement(id: "first_step")
+            changed = true
+        }
+
+        // Location achievements
+        if !achievements[1].isUnlocked && locationHistory.count >= 5 {
+            unlockAchievement(id: "explorer")
+            changed = true
+        }
+        if !achievements[2].isUnlocked && locationHistory.count >= 20 {
+            unlockAchievement(id: "world_traveler")
+            changed = true
+        }
+
+        // NPC achievements
+        if !achievements[3].isUnlocked && metNPCs.count >= 5 {
+            unlockAchievement(id: "social")
+            changed = true
+        }
+        if !achievements[4].isUnlocked && metNPCs.count >= 15 {
+            unlockAchievement(id: "diplomat")
+            changed = true
+        }
+
+        // Inventory achievements
+        if !achievements[5].isUnlocked && inventory.count >= 5 {
+            unlockAchievement(id: "collector")
+            changed = true
+        }
+        if !achievements[6].isUnlocked && inventory.count >= 15 {
+            unlockAchievement(id: "hoarder")
+            changed = true
+        }
+
+        // Action count achievements
+        let totalActions = actionHistory.count
+        if !achievements[7].isUnlocked && totalActions >= 50 {
+            unlockAchievement(id: "conversationalist")
+            changed = true
+        }
+        if !achievements[8].isUnlocked && totalActions >= 200 {
+            unlockAchievement(id: "veteran")
+            changed = true
+        }
+
+        if changed {
+            saveAchievements()
+        }
+    }
+
+    private func unlockAchievement(id: String) {
+        if let index = achievements.firstIndex(where: { $0.id == id }) {
+            achievements[index] = Achievement(
+                id: achievements[index].id,
+                title: achievements[index].title,
+                description: achievements[index].description,
+                isUnlocked: true,
+                unlockDate: Date()
+            )
+            addMessage("")
+            addMessage("Achievement Unlocked: \(achievements[index].title)")
+            addMessage("")
+        }
+    }
+
+    private func saveAchievements() {
+        if let encoded = try? JSONEncoder().encode(achievements) {
+            UserDefaults.standard.set(encoded, forKey: "BlompieTVAchievements")
+        }
+    }
+
+    private func loadAchievements() {
+        guard let data = UserDefaults.standard.data(forKey: "BlompieTVAchievements"),
+              let saved = try? JSONDecoder().decode([Achievement].self, from: data) else {
+            return
+        }
+        achievements = saved
+    }
+
+    // MARK: - Parsing & Tracking
+
+    private func parseAndTrackGameElements(_ response: String) {
+        let lowercased = response.lowercased()
+
+        // Track NPCs (look for character names and interactions)
+        let npcIndicators = ["meets", "encounter", "greet", "merchant", "traveler", "guide", "sprite", "elder", "adventurer", "wizard", "gnome", "shopkeeper"]
+        for indicator in npcIndicators {
+            if lowercased.contains(indicator) {
+                // Extract potential NPC name from context
+                let words = response.components(separatedBy: .whitespaces)
+                for (index, word) in words.enumerated() {
+                    if word.lowercased() == indicator && index + 1 < words.count {
+                        let potentialName = words[index + 1].trimmingCharacters(in: .punctuationCharacters)
+                        if potentialName.first?.isUppercase == true && !metNPCs.contains(potentialName) {
+                            metNPCs.append(potentialName)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Track inventory (look for "you pick up", "you take", "you receive")
+        let inventoryPhrases = ["pick up", "take the", "receive", "acquire", "find a", "grab"]
+        for phrase in inventoryPhrases {
+            if lowercased.contains(phrase) {
+                if let range = lowercased.range(of: phrase) {
+                    let afterPhrase = String(response[range.upperBound...])
+                    let words = afterPhrase.components(separatedBy: .whitespaces).prefix(3)
+                    let item = words.joined(separator: " ").trimmingCharacters(in: .punctuationCharacters)
+                    if !item.isEmpty && !inventory.contains(item) {
+                        inventory.append(item)
+                    }
+                }
+            }
+        }
+
+        // Track locations (look for "you enter", "you arrive", "you're in")
+        let locationPhrases = ["enter", "arrive at", "you're in", "standing in", "you find yourself"]
+        for phrase in locationPhrases {
+            if lowercased.contains(phrase) {
+                if let range = lowercased.range(of: phrase) {
+                    let afterPhrase = String(response[range.upperBound...])
+                    let words = afterPhrase.components(separatedBy: .whitespaces).prefix(4)
+                    let location = words.joined(separator: " ").trimmingCharacters(in: .punctuationCharacters)
+                    if !location.isEmpty && !locationHistory.contains(location) {
+                        locationHistory.append(location)
+                    }
+                }
+            }
+        }
+
+        checkAchievements()
+    }
+
+    private func generateSystemPrompt() -> String {
+        let detailInstruction: String
+        switch detailLevel {
+        case .brief:
+            detailInstruction = "Keep descriptions VERY brief (1-2 sentences maximum). Focus on action over description."
+        case .normal:
+            detailInstruction = "Keep descriptions concise but evocative (2-4 sentences)."
+        case .detailed:
+            detailInstruction = "Provide rich, detailed descriptions (4-6 sentences). Paint a vivid picture with sensory details."
+        }
+
+        let toneInstruction: String
+        switch toneStyle {
+        case .serious:
+            toneInstruction = "Maintain a serious, dramatic tone. The world is mysterious and consequential."
+        case .balanced:
+            toneInstruction = "Balance seriousness with occasional lightness. The world can be both mysterious and charming."
+        case .whimsical:
+            toneInstruction = "Embrace whimsy and humor. The world is playful, quirky, and delightfully strange."
+        }
+
+        return """
+        You are the game master for a text-based adventure game in the style of Zork. Your role is to:
+
+        1. Create an immersive, mysterious world with interesting locations, puzzles, and discoveries
+        2. Populate the world with NPCs, creatures, and other beings the player can interact with
+        3. Include friendly characters to talk to, trade with, or help (not everything is hostile!)
+        4. Add mysterious beings with their own agendas - some helpful, some mischievous, none deadly
+        5. Create opportunities for dialogue, trading items, solving problems together, and making allies
+        6. Present 2-4 possible actions focusing on INTERACTION over examination
+        7. Track inventory, location, relationships, and game state implicitly
+        8. Make the world feel alive with beings who have personality, quirks, and goals
+        9. Avoid deadly combat - conflicts should be puzzles, negotiations, or clever escapes
+        10. Vary the gameplay: talking, trading, following, helping, questioning, befriending
+
+        IMPORTANT: Balance exploration with social interaction. Not every scene needs an NPC, but the player should regularly encounter other beings. These can be:
+        - Friendly travelers with useful information or items to trade
+        - Eccentric shopkeepers or merchants
+        - Magical creatures who speak in riddles
+        - Lost adventurers who need help
+        - Mysterious guides offering cryptic advice
+        - Mischievous sprites playing harmless tricks
+        - Wise elders with stories and knowledge
+        - Fellow explorers with their own quests
+
+        CRITICAL - ACTIONS MUST PROGRESS THE STORY:
+        - When a player takes an action, something NEW must happen
+        - If they "step through door" they enter a DIFFERENT location with NEW elements
+        - If they "read journal" they learn SPECIFIC information or trigger an event
+        - If they "talk to NPC" the NPC responds with DIALOGUE and actions
+        - NEVER re-describe the same scene with different metaphors
+        - PROGRESS IS MANDATORY - each action moves the story forward
+        - Avoid excessive metaphors - be concrete, clear, and actionable
+        - Make EVENTS happen: discoveries, meetings, changes, revelations
+
+        BAD (stuck): "The door glows. The crystal pulses. You sense mystery."
+        GOOD (progress): "You step through. You're now in a forest clearing. An old wizard sits by a fire."
+
+        STYLE: \(detailInstruction) \(toneInstruction) But ALWAYS prioritize story progression over atmosphere.
+
+        CRITICAL FORMAT REQUIREMENT - THIS IS MANDATORY:
+        You MUST end every response with action options. Use ANY of these formats:
+
+        FORMAT 1 (PREFERRED): Pipe-separated on one line:
+        ACTIONS: action1 | action2 | action3 | action4
+
+        FORMAT 2 (ACCEPTABLE): Numbered list:
+        1. Open the door
+        2. Talk to the merchant
+        3. Pick up the sword
+        4. Go north
+
+        FORMAT 3 (ACCEPTABLE): Bulleted list with header:
+        What do you do?
+        1. Action one
+        2. Action two
+        3. Action three
+        4. Action four
+
+        IMPORTANT: Actions must be SHORT (2-6 words), SPECIFIC, and ACTIONABLE.
+        BAD: "Examine the intricate carvings on the ancient door while pondering"
+        GOOD: "Examine door carvings"
+
+        Make actions specific and interesting. Prioritize interactive actions over passive examination. MAKE THINGS HAPPEN.
+        """
+    }
+
+    func startNewGame() {
+        messages = []
+        conversationHistory = []
+        currentActions = []
+        actionHistory = []
+        metNPCs = []
+        inventory = []
+        locationHistory = []
+        stateHistory = []
+
+        addMessage("=== BLOMPIE TV ===")
+        addMessage("A Text Adventure Powered by AI")
+        addMessage("")
+        addMessage("Initializing game world...")
+        addMessage("")
+
+        Task {
+            await generateInitialScene()
+        }
+    }
+
+    func performAction(_ action: String) {
+        // Save state before action for undo
+        saveStateSnapshot()
+
+        // Track action
+        actionHistory.append(action)
+        if actionHistory.count > 10 {
+            actionHistory.removeFirst()
+        }
+
+        // Random model switching
+        if randomModelMode {
+            actionsSinceModelSwitch += 1
+            if actionsSinceModelSwitch >= actionsUntilModelSwitch {
+                switchToRandomModel()
+                actionsSinceModelSwitch = 0
+            }
+        }
+
+        addMessage("> \(action)")
+        addMessage("")
+
+        Task {
+            await sendMessageToOllama(action)
+        }
+    }
+
+    private func switchToRandomModel() {
+        guard !availableModels.isEmpty else { return }
+        let otherModels = availableModels.filter { $0 != selectedModel }
+        if let randomModel = otherModels.randomElement() {
+            selectedModel = randomModel
+            addMessage("")
+            addMessage("Switched to model: \(randomModel)")
+            addMessage("")
+        }
+    }
+
+    func undoLastAction() {
+        guard !stateHistory.isEmpty else { return }
+
+        let snapshot = stateHistory.removeLast()
+        messages = snapshot.messages
+        conversationHistory = snapshot.conversationHistory
+        currentActions = snapshot.currentActions
+
+        if !actionHistory.isEmpty {
+            actionHistory.removeLast()
+        }
+    }
+
+    private func saveStateSnapshot() {
+        let snapshot = GameSnapshot(
+            messages: messages,
+            conversationHistory: conversationHistory,
+            currentActions: currentActions
+        )
+        stateHistory.append(snapshot)
+
+        // Keep last 20 snapshots
+        if stateHistory.count > 20 {
+            stateHistory.removeFirst()
+        }
+    }
+
+    private func generateInitialScene() async {
+        isLoading = true
+
+        conversationHistory.append(OllamaMessage(
+            role: "system",
+            content: generateSystemPrompt()
+        ))
+
+        conversationHistory.append(OllamaMessage(
+            role: "user",
+            content: "Start a new text adventure. Describe the opening scene and provide the first set of actions."
+        ))
+
+        await sendToOllama()
+        isLoading = false
+    }
+
+    private func sendMessageToOllama(_ userMessage: String) async {
+        isLoading = true
+
+        conversationHistory.append(OllamaMessage(
+            role: "user",
+            content: userMessage
+        ))
+
+        await sendToOllama()
+        isLoading = false
+    }
+
+    private func sendToOllama() async {
+        ollamaService.model = selectedModel
+        ollamaService.temperature = temperature
+        streamingText = ""
+        var fullResponse = ""
+
+        do {
+            if streamingEnabled {
+                try await ollamaService.chatStreaming(messages: conversationHistory) { chunk in
+                    Task { @MainActor in
+                        fullResponse += chunk
+                        self.streamingText = fullResponse
+                    }
+                } onComplete: { tokensPerSecond in
+                    Task { @MainActor in
+                        if let tps = tokensPerSecond {
+                            self.lastTokensPerSecond = tps
+                        }
+                    }
+                }
+            } else {
+                fullResponse = try await ollamaService.chat(messages: conversationHistory)
+            }
+
+            conversationHistory.append(OllamaMessage(
+                role: "assistant",
+                content: fullResponse
+            ))
+
+            streamingText = ""
+
+            // Parse response to extract narrative and actions
+            parseOllamaResponse(fullResponse)
+
+            if autoSaveEnabled {
+                saveGame(toSlot: "autosave")
+            }
+        } catch {
+            streamingText = ""
+            addMessage("=== ERROR ===")
+            if let ollamaError = error as? OllamaError {
+                addMessage(ollamaError.errorDescription ?? error.localizedDescription)
+            } else {
+                addMessage("Error: \(error.localizedDescription)")
+            }
+            addMessage("")
+            addMessage("Troubleshooting:")
+            addMessage("1. Go to Settings and configure your AI server")
+            addMessage("2. Make sure Ollama or OpenWebUI is running")
+            addMessage("3. Verify the \(selectedModel) model is installed")
+
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private func parseOllamaResponse(_ response: String) {
+        let lines = response.components(separatedBy: .newlines)
+        var narrativeLines: [String] = []
+        var actions: [String] = []
+
+        // System prompt keywords to filter out
+        let systemPromptPhrases = [
+            "You are the game master",
+            "Your role is to:",
+            "CRITICAL FORMAT REQUIREMENT",
+            "CRITICAL - ACTIONS MUST",
+            "Example response format:",
+            "Always end your response",
+            "Keep descriptions concise",
+            "Create an immersive",
+            "Respond to player actions",
+            "Present 2-4 possible actions",
+            "Be creative and surprising",
+            "Track inventory",
+            "Make the world feel alive",
+            "Populate the world with NPCs",
+            "Include friendly characters",
+            "IMPORTANT: Balance exploration",
+            "These can be:",
+            "Friendly travelers with useful",
+            "Eccentric shopkeepers",
+            "Magical creatures who speak",
+            "Prioritize interactive actions",
+            "When a player takes an action",
+            "PROGRESS IS MANDATORY",
+            "NEVER re-describe the same",
+            "BAD (stuck):",
+            "GOOD (progress):",
+            "MAKE THINGS HAPPEN",
+            "But ALWAYS prioritize story"
+        ]
+
+        var inActionsList = false
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            if trimmed.hasPrefix("ACTIONS:") {
+                // Extract actions from pipe-separated format
+                let actionsString = trimmed.replacingOccurrences(of: "ACTIONS:", with: "").trimmingCharacters(in: .whitespaces)
+                actions = actionsString.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+                inActionsList = false
+            } else if trimmed.lowercased().contains("possible actions") ||
+                      trimmed.lowercased().contains("what do you do") ||
+                      trimmed.lowercased().contains("your options") ||
+                      trimmed.lowercased().contains("you can:") {
+                // Detected action section header
+                inActionsList = true
+            } else if trimmed.range(of: "^\\d+\\.\\s*\\*\\*", options: .regularExpression) != nil {
+                // Parse numbered list with bold actions (e.g., "1. **Action** (description)")
+                inActionsList = true
+                // Extract text between ** markers
+                let components = trimmed.components(separatedBy: "**")
+                if components.count >= 3 {
+                    let action = components[1].trimmingCharacters(in: .whitespaces)
+                    if !action.isEmpty {
+                        actions.append(action)
+                    }
+                }
+            } else if trimmed.range(of: "^\\d+\\.", options: .regularExpression) != nil {
+                // Parse any numbered list item as potential action
+                let withoutNumber = trimmed.replacingOccurrences(of: "^\\d+\\.\\s*", with: "", options: .regularExpression)
+                // Remove parenthetical descriptions
+                let action = withoutNumber.components(separatedBy: "(").first?.trimmingCharacters(in: .whitespaces) ?? withoutNumber
+                // Remove trailing punctuation and descriptions
+                let cleanAction = action.components(separatedBy: ":").first?.trimmingCharacters(in: .punctuationCharacters.union(.whitespaces)) ?? action
+                if !cleanAction.isEmpty && cleanAction.count < 80 {
+                    actions.append(cleanAction)
+                    inActionsList = true
+                }
+            } else if !trimmed.isEmpty {
+                // Filter out system prompt text
+                let isSystemPrompt = systemPromptPhrases.contains { phrase in
+                    trimmed.contains(phrase)
+                }
+
+                // Don't add action list items to narrative
+                if !isSystemPrompt && !inActionsList {
+                    narrativeLines.append(line)
+                }
+            }
+        }
+
+        // Add narrative to messages
+        let narrative = narrativeLines.joined(separator: "\n")
+        if !narrative.isEmpty {
+            addMessage(narrative)
+            addMessage("")
+        }
+
+        // Update current actions
+        currentActions = actions.filter { !$0.isEmpty }
+
+        // If no actions were found, provide default exploration actions
+        if currentActions.isEmpty {
+            currentActions = ["Look around", "Continue", "Go back", "Examine surroundings"]
+        }
+
+        // Track NPCs, inventory, locations, and check achievements
+        parseAndTrackGameElements(response)
+    }
+
+    private func addMessage(_ text: String) {
+        messages.append(GameMessage(text: text))
+    }
+
+    // MARK: - Save/Load
+
+    func saveGame(toSlot slotName: String = "autosave") {
+        let state = GameState(
+            messages: messages,
+            conversationHistory: conversationHistory,
+            currentActions: currentActions,
+            slotName: slotName,
+            savedDate: Date()
+        )
+
+        if let encoded = try? JSONEncoder().encode(state) {
+            UserDefaults.standard.set(encoded, forKey: "BlompieTVGameState_\(slotName)")
+            updateSaveSlotMetadata(slotName: slotName, messageCount: messages.count)
+        }
+    }
+
+    func loadGame(fromSlot slotName: String = "autosave") {
+        guard let data = UserDefaults.standard.data(forKey: "BlompieTVGameState_\(slotName)"),
+              let state = try? JSONDecoder().decode(GameState.self, from: data) else {
+            return
+        }
+
+        messages = state.messages
+        conversationHistory = state.conversationHistory
+        currentActions = state.currentActions
+    }
+
+    func getSaveSlots() -> [SaveSlot] {
+        guard let data = UserDefaults.standard.data(forKey: "BlompieTVSaveSlots"),
+              let slots = try? JSONDecoder().decode([SaveSlot].self, from: data) else {
+            return []
+        }
+        return slots.sorted { $0.savedDate > $1.savedDate }
+    }
+
+    private func updateSaveSlotMetadata(slotName: String, messageCount: Int) {
+        var slots = getSaveSlots()
+        slots.removeAll { $0.id == slotName }
+        slots.append(SaveSlot(id: slotName, name: slotName, savedDate: Date(), messageCount: messageCount))
+
+        if let encoded = try? JSONEncoder().encode(slots) {
+            UserDefaults.standard.set(encoded, forKey: "BlompieTVSaveSlots")
+        }
+    }
+
+    func deleteSaveSlot(_ slotName: String) {
+        UserDefaults.standard.removeObject(forKey: "BlompieTVGameState_\(slotName)")
+        var slots = getSaveSlots()
+        slots.removeAll { $0.id == slotName }
+        if let encoded = try? JSONEncoder().encode(slots) {
+            UserDefaults.standard.set(encoded, forKey: "BlompieTVSaveSlots")
+        }
+    }
+
+    // MARK: - Export
+
+    func exportTranscript() -> String {
+        var transcript = "=== BLOMPIE TV GAME TRANSCRIPT ===\n"
+        transcript += "Exported: \(Date().formatted())\n"
+        transcript += "Model: \(selectedModel)\n"
+        transcript += "Total Messages: \(messages.count)\n"
+        transcript += "\n" + String(repeating: "=", count: 50) + "\n\n"
+
+        for message in messages {
+            transcript += message.text + "\n"
+        }
+
+        return transcript
+    }
+}
