@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		2CF7DCE6C1E3B55127E984E8 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C938DD3CAD73902FD5300880 /* Foundation.framework */; };
+		563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */; };
 		8ABDBCE98BD16EADD2B38008 /* ContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE4786FF89A926AE35291FF /* ContentProvider.swift */; };
+		9BAB2DF758C8BB3572AC0854 /* AIBackendStatusMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = C84E6B44E58233D43C2F5520 /* AIBackendStatusMenu.swift */; };
 		A07DB8894E0289A74BF1E14A /* TVServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D90FFE197A38DF859D10B9D /* TVServices.framework */; };
 		A1000001000000000000001 /* BlompieTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000001 /* BlompieTVApp.swift */; };
 		A1000003000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000000000000001 /* ContentView.swift */; };
@@ -62,6 +64,8 @@
 		A1000018000000000000001 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		A1000019000000000000001 /* BlompieTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BlompieTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE3FD1CCBB939FCD9A810380 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AIBackendManager.swift; path = BlompieTV/Services/AIBackendManager.swift; sourceTree = "<group>"; };
+		C84E6B44E58233D43C2F5520 /* AIBackendStatusMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AIBackendStatusMenu.swift; path = BlompieTV/Services/AIBackendStatusMenu.swift; sourceTree = "<group>"; };
 		C938DD3CAD73902FD5300880 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
@@ -92,6 +96,7 @@
 				A1000023000000000000001 /* Products */,
 				D3236B227083AFC9CB5EF3F2 /* Frameworks */,
 				D7DE2FF59756511484393DC1 /* BlompieTVTopShelf */,
+				FF6546DFC58B664969DCC774 /* AIBackend */,
 			);
 			sourceTree = "<group>";
 		};
@@ -162,6 +167,15 @@
 				C938DD3CAD73902FD5300880 /* Foundation.framework */,
 			);
 			name = tvOS;
+			sourceTree = "<group>";
+		};
+		FF6546DFC58B664969DCC774 /* AIBackend */ = {
+			isa = PBXGroup;
+			children = (
+				C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */,
+				C84E6B44E58233D43C2F5520 /* AIBackendStatusMenu.swift */,
+			);
+			name = AIBackend;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -276,6 +290,8 @@
 				A1000013000000000000001 /* SettingsView.swift in Sources */,
 				A1000015000000000000001 /* SaveLoadView.swift in Sources */,
 				A1000017000000000000001 /* StatsView.swift in Sources */,
+				563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */,
+				9BAB2DF758C8BB3572AC0854 /* AIBackendStatusMenu.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
