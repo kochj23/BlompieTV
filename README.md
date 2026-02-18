@@ -149,3 +149,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Network service discovery for Ollama/OpenWebUI
 - Focus-based navigation for Siri Remote
 - Full save/load and achievement system
+
+---
+
+> **Disclaimer:** This is a personal project created on my own time. It is not affiliated with, endorsed by, or representative of my employer.
