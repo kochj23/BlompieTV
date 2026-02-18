@@ -1,5 +1,7 @@
 # BlompieTV
 
+![Build](https://github.com/kochj23/BlompieTV/actions/workflows/build.yml/badge.svg)
+
 A tvOS port of the Blompie AI-powered text adventure game. Experience classic Zork-style interactive fiction on your Apple TV, powered by Ollama or OpenWebUI running on your local network.
 
 ## Features
