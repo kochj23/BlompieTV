@@ -77,3 +77,4 @@ config.plist
 *.swp
 *.swo
 *~
+*.xcuserstate
