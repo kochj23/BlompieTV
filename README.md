@@ -13,7 +13,7 @@ A tvOS port of the Blompie AI-powered text adventure game. Experience classic Zo
 - **Achievement System**: Track your progress with 10 unlockable achievements
 - **Model Selection**: Choose from available models on your AI server
 - **Streaming Responses**: Watch the story unfold in real-time
-- **Statistics Tracking**: Monitor NPCs met, items collected, locations visited
+- **Statistics Tracking**: Monitor NPCs (Non-Player Characters) met, items collected, locations visited
 
 ## Screenshots
 
@@ -74,7 +74,7 @@ Ensure your AI server is accessible from your Apple TV:
 1. Launch BlompieTV on your Apple TV
 2. Go to Settings
 3. Either use "Scan Network" to automatically discover servers, or manually enter:
-   - Server IP address (e.g., 192.168.1.100)
+   - Server IP (Internet Protocol) address (e.g., 192.168.1.100)
    - Port number (e.g., 11434)
    - Server type (Ollama or OpenWebUI)
 4. Test the connection
