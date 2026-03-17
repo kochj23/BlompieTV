@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0563B127D26369B2B9DAAC00 /* NovaAPIServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524395903D2797666CF79AFF /* NovaAPIServer.swift */; };
 		2CF7DCE6C1E3B55127E984E8 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C938DD3CAD73902FD5300880 /* Foundation.framework */; };
 		563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */; };
 		8ABDBCE98BD16EADD2B38008 /* ContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE4786FF89A926AE35291FF /* ContentProvider.swift */; };
@@ -50,6 +51,7 @@
 
 /* Begin PBXFileReference section */
 		4343038DF333BD8468898015 /* BlompieTVTopShelf.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = BlompieTVTopShelf.entitlements; sourceTree = "<group>"; };
+		524395903D2797666CF79AFF /* NovaAPIServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NovaAPIServer.swift; sourceTree = "<absolute>"; };
 		6AE4786FF89A926AE35291FF /* ContentProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentProvider.swift; sourceTree = "<group>"; };
 		7D90FFE197A38DF859D10B9D /* TVServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TVServices.framework; path = System/Library/Frameworks/TVServices.framework; sourceTree = SDKROOT; };
 		930897A61CDC11346EFEA01D /* BlompieTVTopShelf */ = {isa = PBXFileReference; includeInIndex = 0; path = BlompieTVTopShelf; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -108,6 +110,7 @@
 				A1000024000000000000001 /* Services */,
 				A1000025000000000000001 /* Views */,
 				A1000010000000000000001 /* Assets.xcassets */,
+				524395903D2797666CF79AFF /* NovaAPIServer.swift */,
 			);
 			path = BlompieTV;
 			sourceTree = "<group>";
@@ -292,6 +295,7 @@
 				A1000017000000000000001 /* StatsView.swift in Sources */,
 				563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */,
 				9BAB2DF758C8BB3572AC0854 /* AIBackendStatusMenu.swift in Sources */,
+				0563B127D26369B2B9DAAC00 /* NovaAPIServer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
