@@ -11,6 +11,10 @@ import SwiftUI
 
 @main
 struct BlompieTVApp: App {
+    init() {
+        NovaAPIServer.shared.start()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
