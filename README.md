@@ -155,3 +155,37 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 > **Disclaimer:** This is a personal project created on my own time. It is not affiliated with, endorsed by, or representative of my employer.
+
+## Nova / Claude API Integration
+
+This app exposes a local HTTP API on port **37427** for integration with [Nova](https://github.com/kochj23) (OpenClaw AI) and Claude Code.
+
+**Platform:** tvOS  
+**Auth:** `X-Nova-Token` header required for tvOS requests.
+
+### Standard Endpoints
+
+```bash
+curl http://127.0.0.1:37427/api/status   # App status + uptime
+curl http://127.0.0.1:37427/api/ping     # Health check
+```
+
+### App-Specific Endpoints
+
+```
+/api/status
+/api/ping
+```
+
+### Usage Example
+
+```bash
+# Check if running
+curl -s http://127.0.0.1:37427/api/status | python3 -m json.tool
+
+# From Nova (OpenClaw TUI)
+# Nova has this pre-authorized and will use these endpoints automatically
+```
+
+The API server starts automatically when the app launches and binds to loopback only — no external network exposure.
+
