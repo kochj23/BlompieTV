@@ -51,7 +51,7 @@
 
 /* Begin PBXFileReference section */
 		4343038DF333BD8468898015 /* BlompieTVTopShelf.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = BlompieTVTopShelf.entitlements; sourceTree = "<group>"; };
-		524395903D2797666CF79AFF /* NovaAPIServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NovaAPIServer.swift; sourceTree = "<absolute>"; };
+		524395903D2797666CF79AFF /* NovaAPIServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "/Volumes/Data/xcode/BlompieTV/BlompieTV/NovaAPIServer.swift"; sourceTree = "<absolute>"; };
 		6AE4786FF89A926AE35291FF /* ContentProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentProvider.swift; sourceTree = "<group>"; };
 		7D90FFE197A38DF859D10B9D /* TVServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TVServices.framework; path = System/Library/Frameworks/TVServices.framework; sourceTree = SDKROOT; };
 		930897A61CDC11346EFEA01D /* BlompieTVTopShelf */ = {isa = PBXFileReference; includeInIndex = 0; path = BlompieTVTopShelf; sourceTree = BUILT_PRODUCTS_DIR; };
