@@ -3,7 +3,8 @@
 ![Build](https://github.com/kochj23/BlompieTV/actions/workflows/build.yml/badge.svg)
 ![Platform](https://img.shields.io/badge/platform-tvOS%2017.0+-black)
 ![Swift](https://img.shields.io/badge/Swift-5.0-orange)
-![License](https://img.shields.io/badge/license-MIT-blue)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Tests](https://img.shields.io/badge/tests-29%20cases-brightgreen)
 
 An AI-powered text adventure game for Apple TV. BlompieTV brings classic Zork-style interactive fiction to the big screen, generating dynamic narratives in real time using large language models running on your local network. No cloud services required -- your stories stay on your network.
 
@@ -297,6 +298,59 @@ The API server starts automatically when the app launches.
 - Top Shelf extension with game state display
 - Random Model Mode for varied storytelling
 - Nova API server on port 37427
+
+---
+
+## Architecture (Mermaid)
+
+```mermaid
+graph TD
+    A[BlompieTVApp] --> B[ContentView]
+    A --> N[NovaAPIServer<br>port 37427]
+    B --> C[GameEngine]
+    B --> D[SettingsView]
+    B --> E[SaveLoadView]
+    B --> F[StatsView]
+    C --> G[OllamaService]
+    C --> H[Save/Load System]
+    C --> I[Achievement System]
+    C --> J[NPC/Item/Location Tracker]
+    G --> K{AI Backend}
+    K --> L[Ollama :11434]
+    K --> M[OpenWebUI :3000/:8080]
+    K --> O[TinyLLM :8000]
+    K --> P[TinyChat :8000]
+    A --> Q[TopShelfDataManager]
+    Q --> R[Top Shelf Extension]
+    S[AIBackendManager] --> K
+    T[ServerDiscovery] -.->|Bonjour + Port Scan| K
+
+    style A fill:#0d1117,stroke:#00ffcc,color:#00ffcc
+    style C fill:#0d1117,stroke:#00ffcc,color:#00ffcc
+    style N fill:#0d1117,stroke:#ff6b6b,color:#ff6b6b
+```
+
+---
+
+## Testing
+
+The test suite (`BlompieTVTests`) validates models, parsing, codable conformance, and security. Run tests via Xcode or the command line:
+
+```bash
+xcodebuild test -scheme BlompieTV -sdk appletvsimulator -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)'
+```
+
+### Test Coverage
+
+| Category | Tests | What's Covered |
+|----------|-------|----------------|
+| **Models** | 12 | GameMessage, SaveSlot, GameSnapshot, Achievement, GameState codable round-trips |
+| **Enums** | 3 | DetailLevel, ToneStyle, AIServerType raw values and case counts |
+| **OllamaService** | 5 | OllamaMessage, ChatRequest/Response encoding, tokens-per-second calculation |
+| **AI Backends** | 4 | AIBackend enum, AIBackendSettings codable, AIBackendError descriptions |
+| **Server Discovery** | 3 | DiscoveredServer equality, hashing, deduplication |
+| **Security** | 4 | No hardcoded API keys, loopback-only API binding, correct port, no secrets in UserDefaults |
+| **Total** | **29** | |
 
 ---
 

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0563B127D26369B2B9DAAC00 /* NovaAPIServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524395903D2797666CF79AFF /* NovaAPIServer.swift */; };
 		2CF7DCE6C1E3B55127E984E8 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C938DD3CAD73902FD5300880 /* Foundation.framework */; };
+		32C02CE74724E4B77584C4AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C938DD3CAD73902FD5300880 /* Foundation.framework */; };
 		563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */; };
 		8ABDBCE98BD16EADD2B38008 /* ContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE4786FF89A926AE35291FF /* ContentProvider.swift */; };
 		9BAB2DF758C8BB3572AC0854 /* AIBackendStatusMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = C84E6B44E58233D43C2F5520 /* AIBackendStatusMenu.swift */; };
@@ -26,6 +27,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		45428CA04435E6C047F127F5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000030000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1000026000000000000001;
+			remoteInfo = BlompieTV;
+		};
 		F100A545DCFD4060A77EE393 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A1000030000000000000001 /* Project object */;
@@ -51,9 +59,10 @@
 
 /* Begin PBXFileReference section */
 		4343038DF333BD8468898015 /* BlompieTVTopShelf.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = BlompieTVTopShelf.entitlements; sourceTree = "<group>"; };
-		524395903D2797666CF79AFF /* NovaAPIServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "/Volumes/Data/xcode/BlompieTV/BlompieTV/NovaAPIServer.swift"; sourceTree = "<absolute>"; };
+		524395903D2797666CF79AFF /* NovaAPIServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = /Volumes/Data/xcode/BlompieTV/BlompieTV/NovaAPIServer.swift; sourceTree = "<absolute>"; };
 		6AE4786FF89A926AE35291FF /* ContentProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentProvider.swift; sourceTree = "<group>"; };
 		7D90FFE197A38DF859D10B9D /* TVServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TVServices.framework; path = System/Library/Frameworks/TVServices.framework; sourceTree = SDKROOT; };
+		8276333B4DB28D7A72D2657B /* BlompieTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlompieTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		930897A61CDC11346EFEA01D /* BlompieTVTopShelf */ = {isa = PBXFileReference; includeInIndex = 0; path = BlompieTVTopShelf; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000002000000000000001 /* BlompieTVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlompieTVApp.swift; sourceTree = "<group>"; };
 		A1000004000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -72,6 +81,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1FCCC3DAC74AED63FB0A624E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				32C02CE74724E4B77584C4AD /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		2A7100244040974B68273CEC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -91,6 +108,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1E37CD195E1035C64D0F25B5 /* BlompieTVTests */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = BlompieTVTests;
+			path = BlompieTVTests;
+			sourceTree = "<group>";
+		};
 		A1000021000000000000001 = {
 			isa = PBXGroup;
 			children = (
@@ -99,6 +124,7 @@
 				D3236B227083AFC9CB5EF3F2 /* Frameworks */,
 				D7DE2FF59756511484393DC1 /* BlompieTVTopShelf */,
 				FF6546DFC58B664969DCC774 /* AIBackend */,
+				1E37CD195E1035C64D0F25B5 /* BlompieTVTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -120,6 +146,7 @@
 			children = (
 				A1000019000000000000001 /* BlompieTV.app */,
 				930897A61CDC11346EFEA01D /* BlompieTVTopShelf */,
+				8276333B4DB28D7A72D2657B /* BlompieTVTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -201,6 +228,24 @@
 			productReference = 930897A61CDC11346EFEA01D /* BlompieTVTopShelf */;
 			productType = "com.apple.product-type.tv-app-extension";
 		};
+		77E1CDAFD0A90995365C0619 /* BlompieTVTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A721990029372DF179BFBBDD /* Build configuration list for PBXNativeTarget "BlompieTVTests" */;
+			buildPhases = (
+				BAECD5ED51B0EDF9560FEC6C /* Sources */,
+				1FCCC3DAC74AED63FB0A624E /* Frameworks */,
+				AFB4F8261F422811C5701D1C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5489A223CA50B2E285E0127C /* PBXTargetDependency */,
+			);
+			name = BlompieTVTests;
+			productName = BlompieTVTests;
+			productReference = 8276333B4DB28D7A72D2657B /* BlompieTVTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		A1000026000000000000001 /* BlompieTV */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A1000027000000000000001 /* Build configuration list for PBXNativeTarget "BlompieTV" */;
@@ -250,6 +295,7 @@
 			targets = (
 				A1000026000000000000001 /* BlompieTV */,
 				12E720C638EFBB73EDE6FDA4 /* BlompieTVTopShelf */,
+				77E1CDAFD0A90995365C0619 /* BlompieTVTests */,
 			);
 		};
 /* End PBXProject section */
@@ -260,6 +306,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000009000000000000001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AFB4F8261F422811C5701D1C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -299,9 +352,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BAECD5ED51B0EDF9560FEC6C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		5489A223CA50B2E285E0127C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = BlompieTV;
+			target = A1000026000000000000001 /* BlompieTV */;
+			targetProxy = 45428CA04435E6C047F127F5 /* PBXContainerItemProxy */;
+		};
 		6B55D4B23BDD625F1B382361 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = BlompieTVTopShelf;
@@ -311,6 +377,23 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		5B3353C727818D2E156F8CE8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = QRRCB8HB3W;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordankoch.BlompieTVTests;
+				SDKROOT = appletvos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlompieTV.app/BlompieTV";
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		A1000032000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -515,6 +598,22 @@
 			};
 			name = Debug;
 		};
+		E522030B644F3F1A60486F4A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = QRRCB8HB3W;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.jordankoch.BlompieTVTests;
+				SDKROOT = appletvos;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlompieTV.app/BlompieTV";
+				TVOS_DEPLOYMENT_TARGET = 17.0;
+			};
+			name = Debug;
+		};
 		EF46F721C593850C263C777D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -567,6 +666,15 @@
 			buildConfigurations = (
 				A1000032000000000000001 /* Debug */,
 				A1000033000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A721990029372DF179BFBBDD /* Build configuration list for PBXNativeTarget "BlompieTVTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5B3353C727818D2E156F8CE8 /* Release */,
+				E522030B644F3F1A60486F4A /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
