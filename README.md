@@ -14,52 +14,51 @@ Written by Jordan Koch.
 
 ## Architecture
 
+```mermaid
+graph TD
+    A[BlompieTVApp] --> B[ContentView]
+    A --> N[NovaAPIServer<br/>port 37427]
+    B --> C[GameEngine]
+    B --> D[SettingsView]
+    B --> E[SaveLoadView]
+    B --> F[StatsView]
+    C --> G[OllamaService]
+    C --> H[Save/Load System]
+    C --> I[Achievement System]
+    C --> J[NPC/Item/Location Tracker]
+    G --> K{AI Backend}
+    K --> L[Ollama :11434]
+    K --> M[OpenWebUI :3000/:8080]
+    K --> O[TinyLLM :8000]
+    K --> P[TinyChat :8000]
+    A --> Q[TopShelfDataManager]
+    Q --> R[Top Shelf Extension]
+    S[AIBackendManager] --> K
+    T[ServerDiscovery] -.->|Bonjour + Port Scan| K
+
+    style A fill:#0d1117,stroke:#00ffcc,color:#00ffcc
+    style C fill:#0d1117,stroke:#00ffcc,color:#00ffcc
+    style N fill:#0d1117,stroke:#ff6b6b,color:#ff6b6b
 ```
-+------------------------------------------------------------------+
-|                        Apple TV (tvOS 17+)                        |
-|                                                                   |
-|  +--------------------+    +----------------------------------+   |
-|  |   BlompieTVApp     |    |         ContentView              |   |
-|  |   (Entry Point)    |--->|  +------------+ +--------------+ |   |
-|  +--------+-----------+    |  | StoryPanel | | ActionsPanel | |   |
-|           |                |  +------------+ +--------------+ |   |
-|           v                +----------------------------------+   |
-|  +--------------------+                    |                      |
-|  |  NovaAPIServer     |                    v                      |
-|  |  (port 37427)      |    +----------------------------------+   |
-|  |  loopback only     |    |           GameEngine             |   |
-|  +--------------------+    |  - AI prompt construction        |   |
-|                            |  - Response parsing & streaming  |   |
-|  +--------------------+    |  - NPC / item / location tracker |   |
-|  | TopShelfDataManager|    |  - Achievement system (10 total) |   |
-|  | (App Group sync)   |    |  - Save/Load (multi-slot)       |   |
-|  +--------------------+    |  - Undo history (20 snapshots)   |   |
-|                            +----------------+-----------------+   |
-|                                             |                     |
-|  +------------------------------------------+------------------+  |
-|  |                   Service Layer                              | |
-|  |                                                              | |
-|  |  +------------------+  +------------------+  +------------+  | |
-|  |  | OllamaService    |  | AIBackendManager |  | Server     |  | |
-|  |  | - /api/chat      |  | - Ollama         |  | Discovery  |  | |
-|  |  | - /api/tags      |  | - TinyLLM        |  | - Bonjour  |  | |
-|  |  | - streaming      |  | - TinyChat       |  | - Port     |  | |
-|  |  | - token metrics  |  | - OpenWebUI      |  |   scan     |  | |
-|  |  +------------------+  | - Auto-select    |  +------------+  | |
-|  |                        +------------------+                  | |
-|  +--------------------------------------------------------------+ |
-|                             |                                     |
-+-----------------------------+-------------------------------------+
-                              | HTTP (local network)
-                              v
-               +-----------------------------+
-               |    AI Backend (your Mac)    |
-               |                             |
-               |  Ollama     :11434          |
-               |  OpenWebUI  :3000 / :8080   |
-               |  TinyLLM    :8000           |
-               |  TinyChat   :8000           |
-               +-----------------------------+
+
+### Gameplay Flow
+
+```mermaid
+sequenceDiagram
+    participant Player
+    participant ContentView
+    participant GameEngine
+    participant OllamaService
+
+    Player->>ContentView: Select action (Siri Remote)
+    ContentView->>GameEngine: performAction()
+    GameEngine->>GameEngine: Save undo snapshot
+    GameEngine->>OllamaService: chat(messages)
+    OllamaService-->>GameEngine: AI narrative (streaming)
+    GameEngine->>GameEngine: Parse NPCs, items, locations
+    GameEngine->>GameEngine: Check achievements
+    GameEngine-->>ContentView: Update UI state
+    ContentView-->>Player: Display narrative + actions
 ```
 
 ---
@@ -298,37 +297,6 @@ The API server starts automatically when the app launches.
 - Top Shelf extension with game state display
 - Random Model Mode for varied storytelling
 - Nova API server on port 37427
-
----
-
-## Architecture (Mermaid)
-
-```mermaid
-graph TD
-    A[BlompieTVApp] --> B[ContentView]
-    A --> N[NovaAPIServer<br>port 37427]
-    B --> C[GameEngine]
-    B --> D[SettingsView]
-    B --> E[SaveLoadView]
-    B --> F[StatsView]
-    C --> G[OllamaService]
-    C --> H[Save/Load System]
-    C --> I[Achievement System]
-    C --> J[NPC/Item/Location Tracker]
-    G --> K{AI Backend}
-    K --> L[Ollama :11434]
-    K --> M[OpenWebUI :3000/:8080]
-    K --> O[TinyLLM :8000]
-    K --> P[TinyChat :8000]
-    A --> Q[TopShelfDataManager]
-    Q --> R[Top Shelf Extension]
-    S[AIBackendManager] --> K
-    T[ServerDiscovery] -.->|Bonjour + Port Scan| K
-
-    style A fill:#0d1117,stroke:#00ffcc,color:#00ffcc
-    style C fill:#0d1117,stroke:#00ffcc,color:#00ffcc
-    style N fill:#0d1117,stroke:#ff6b6b,color:#ff6b6b
-```
 
 ---
 
