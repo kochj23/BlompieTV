@@ -17,6 +17,9 @@ struct SettingsView: View {
     @State private var manualPort: String = ""
     @State private var selectedTab = 0
     @State private var selectedServerType: AIServerType = .ollama
+    @StateObject private var balancer = LLMBalancerManager.shared
+    @State private var openRouterKeyInput: String = ""
+    @State private var openRouterKeySaved = false
 
     var body: some View {
         NavigationStack {
@@ -35,6 +38,7 @@ struct SettingsView: View {
                         Text("Server").tag(0)
                         Text("Game").tag(1)
                         Text("Model").tag(2)
+                        Text("Cloud").tag(3)
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 200)
@@ -45,8 +49,10 @@ struct SettingsView: View {
                                 serverSettingsSection
                             } else if selectedTab == 1 {
                                 gameSettingsSection
-                            } else {
+                            } else if selectedTab == 2 {
                                 modelSettingsSection
+                            } else {
+                                cloudSettingsSection
                             }
                         }
                         .padding(40)
@@ -468,6 +474,155 @@ struct SettingsView: View {
                 }
             }
             .foregroundColor(.white)
+            .padding(30)
+            .background(settingsCardBackground)
+        }
+    }
+
+    // MARK: - Cloud / Multi-Model Balancer Settings
+
+    private var cloudSettingsSection: some View {
+        VStack(spacing: 30) {
+            // Three balancer toggles
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Load Balancing")
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+
+                Text("Off by default — BlompieTV stays 100% local. Turn these on to spread each turn across more models. All backends are plain HTTP calls.")
+                    .font(.system(size: 20, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.6))
+
+                Toggle("All Local Models (Ollama)", isOn: $balancer.useAllLocalModels)
+                    .font(.system(size: 26, design: .monospaced))
+                    .tint(TVColors.cyan)
+
+                Toggle("All Frontier Models (OpenRouter)", isOn: $balancer.enableAllFrontierModels)
+                    .font(.system(size: 26, design: .monospaced))
+                    .tint(TVColors.cyan)
+
+                if balancer.enableAllFrontierModels && !balancer.hasOpenRouterKey {
+                    Text("Add your OpenRouter key below to enable frontier models.")
+                        .font(.system(size: 20, design: .monospaced))
+                        .foregroundColor(.orange)
+                }
+
+                Toggle("Nova Gateway (optional)", isOn: $balancer.useNovaGateway)
+                    .font(.system(size: 26, design: .monospaced))
+                    .tint(TVColors.cyan)
+
+                Text("Nova is never required. If its health check fails it is simply dropped from the pool.")
+                    .font(.system(size: 20, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            .foregroundColor(.white)
+            .padding(30)
+            .background(settingsCardBackground)
+
+            // OpenRouter API key (Keychain-backed)
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    Text("OpenRouter API Key")
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Circle()
+                        .fill(balancer.hasOpenRouterKey ? Color.green : Color.gray)
+                        .frame(width: 20, height: 20)
+
+                    Text(balancer.hasOpenRouterKey ? "Stored" : "Not set")
+                        .font(.system(size: 22, design: .monospaced))
+                        .foregroundColor(balancer.hasOpenRouterKey ? .green : .white.opacity(0.5))
+                }
+
+                HStack(spacing: 20) {
+                    SecureField("sk-or-...", text: $openRouterKeyInput)
+                        .textFieldStyle(TVTextFieldStyle())
+
+                    Button("Save") {
+                        balancer.setOpenRouterKey(openRouterKeyInput)
+                        openRouterKeyInput = ""
+                        openRouterKeySaved = true
+                        Task { await balancer.refreshOpenRouterModels() }
+                    }
+                    .buttonStyle(TVSecondaryButtonStyle())
+
+                    Button("Clear") {
+                        balancer.setOpenRouterKey("")
+                        openRouterKeyInput = ""
+                        openRouterKeySaved = false
+                    }
+                    .buttonStyle(TVDestructiveButtonStyle())
+                }
+
+                Text("Stored securely in the tvOS Keychain — never in UserDefaults or on disk.")
+                    .font(.system(size: 20, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            .padding(30)
+            .background(settingsCardBackground)
+
+            // Nova Gateway endpoint + status
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Nova Gateway")
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+
+                TextField("Nova URL", text: $balancer.novaGatewayURL)
+                    .textFieldStyle(TVTextFieldStyle())
+
+                HStack {
+                    Circle()
+                        .fill(balancer.isNovaGatewayAvailable ? Color.green : Color.gray)
+                        .frame(width: 20, height: 20)
+
+                    Text(balancer.isNovaGatewayAvailable ? "Reachable" : "Unknown / unreachable")
+                        .font(.system(size: 22, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.7))
+
+                    Spacer()
+
+                    Button("Refresh Pool") {
+                        Task {
+                            _ = await balancer.checkAvailability(.novaGateway)
+                            await balancer.discoverEnabledPool()
+                        }
+                    }
+                    .buttonStyle(TVSecondaryButtonStyle())
+                }
+            }
+            .padding(30)
+            .background(settingsCardBackground)
+
+            // Discovered pool preview
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Discovered Pool (\(balancer.discoveredModels.count))")
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+
+                if balancer.discoveredModels.isEmpty {
+                    Text("Enable a toggle and refresh to see the balanced model pool.")
+                        .font(.system(size: 20, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.5))
+                } else {
+                    ForEach(balancer.discoveredModels) { model in
+                        HStack {
+                            Image(systemName: model.backend.icon)
+                                .foregroundColor(TVColors.cyan)
+                            Text(model.displayName)
+                                .font(.system(size: 22, design: .monospaced))
+                                .foregroundColor(.white)
+                            Spacer()
+                            Text(model.backend.displayName)
+                                .font(.system(size: 18, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+                        .padding(.vertical, 6)
+                    }
+                }
+            }
             .padding(30)
             .background(settingsCardBackground)
         }

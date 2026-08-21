@@ -8,6 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		0563B127D26369B2B9DAAC00 /* NovaAPIServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524395903D2797666CF79AFF /* NovaAPIServer.swift */; };
+		AA10000000000000000000F2 /* ModelRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F1 /* ModelRegistry.swift */; };
+		AA10000000000000000000F4 /* OpenRouterProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F3 /* OpenRouterProvider.swift */; };
+		AA10000000000000000000F6 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F5 /* KeychainStore.swift */; };
+		AA10000000000000000000F8 /* LLMBalancerTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F7 /* LLMBalancerTypes.swift */; };
+		AA10000000000000000000FA /* LLMBalancerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F9 /* LLMBalancerManager.swift */; };
+		AA10000000000000000000FC /* LoadBalancerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000FB /* LoadBalancerTests.swift */; };
 		2CF7DCE6C1E3B55127E984E8 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C938DD3CAD73902FD5300880 /* Foundation.framework */; };
 		32C02CE74724E4B77584C4AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C938DD3CAD73902FD5300880 /* Foundation.framework */; };
 		563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */; };
@@ -59,8 +65,14 @@
 
 /* Begin PBXFileReference section */
 		4343038DF333BD8468898015 /* BlompieTVTopShelf.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = BlompieTVTopShelf.entitlements; sourceTree = "<group>"; };
-		524395903D2797666CF79AFF /* NovaAPIServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = /Volumes/Data/xcode/BlompieTV/BlompieTV/NovaAPIServer.swift; sourceTree = "<absolute>"; };
+		524395903D2797666CF79AFF /* NovaAPIServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NovaAPIServer.swift; sourceTree = "<group>"; };
 		6AE4786FF89A926AE35291FF /* ContentProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentProvider.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F1 /* ModelRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRegistry.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F3 /* OpenRouterProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterProvider.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F5 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F7 /* LLMBalancerTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMBalancerTypes.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F9 /* LLMBalancerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMBalancerManager.swift; sourceTree = "<group>"; };
+		AA10000000000000000000FB /* LoadBalancerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadBalancerTests.swift; sourceTree = "<group>"; };
 		7D90FFE197A38DF859D10B9D /* TVServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TVServices.framework; path = System/Library/Frameworks/TVServices.framework; sourceTree = SDKROOT; };
 		8276333B4DB28D7A72D2657B /* BlompieTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlompieTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		930897A61CDC11346EFEA01D /* BlompieTVTopShelf */ = {isa = PBXFileReference; includeInIndex = 0; path = BlompieTVTopShelf; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -111,6 +123,7 @@
 		1E37CD195E1035C64D0F25B5 /* BlompieTVTests */ = {
 			isa = PBXGroup;
 			children = (
+				AA10000000000000000000FB /* LoadBalancerTests.swift */,
 			);
 			name = BlompieTVTests;
 			path = BlompieTVTests;
@@ -156,6 +169,11 @@
 			children = (
 				A1000008000000000000001 /* OllamaService.swift */,
 				A1000012000000000000001 /* ServerDiscovery.swift */,
+				AA10000000000000000000F1 /* ModelRegistry.swift */,
+				AA10000000000000000000F3 /* OpenRouterProvider.swift */,
+				AA10000000000000000000F5 /* KeychainStore.swift */,
+				AA10000000000000000000F7 /* LLMBalancerTypes.swift */,
+				AA10000000000000000000F9 /* LLMBalancerManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -349,6 +367,11 @@
 				563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */,
 				9BAB2DF758C8BB3572AC0854 /* AIBackendStatusMenu.swift in Sources */,
 				0563B127D26369B2B9DAAC00 /* NovaAPIServer.swift in Sources */,
+				AA10000000000000000000F2 /* ModelRegistry.swift in Sources */,
+				AA10000000000000000000F4 /* OpenRouterProvider.swift in Sources */,
+				AA10000000000000000000F6 /* KeychainStore.swift in Sources */,
+				AA10000000000000000000F8 /* LLMBalancerTypes.swift in Sources */,
+				AA10000000000000000000FA /* LLMBalancerManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -356,6 +379,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA10000000000000000000FC /* LoadBalancerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -386,6 +410,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.jordankoch.BlompieTVTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlompieTV.app/BlompieTV";
@@ -607,6 +632,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.jordankoch.BlompieTVTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlompieTV.app/BlompieTV";

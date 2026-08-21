@@ -558,6 +558,33 @@ class GameEngine: ObservableObject {
         isLoading = false
     }
 
+    /// Optional multi-model balanced generation. Returns nil when no balancing
+    /// toggle is enabled (the default) or when the balanced pool can't answer, so
+    /// the caller always falls back to the existing local Ollama path. Nova and
+    /// cloud are never required.
+    private func generateViaBalancerIfEnabled() async -> String? {
+        let manager = LLMBalancerManager.shared
+        guard manager.isBalancingEnabled else { return nil }
+
+        let systemPrompt = conversationHistory.first { $0.role == "system" }?.content
+        let history = conversationHistory.map {
+            ChatMessage(role: ChatRole(rawValue: $0.role) ?? .user, content: $0.content)
+        }
+        let prompt = conversationHistory.last?.content ?? ""
+
+        do {
+            return try await manager.generate(
+                messages: history,
+                systemPrompt: systemPrompt,
+                prompt: prompt,
+                temperature: Float(temperature),
+                maxTokens: 2048
+            )
+        } catch {
+            return nil
+        }
+    }
+
     private func sendToOllama() async {
         ollamaService.model = selectedModel
         ollamaService.temperature = temperature
@@ -565,7 +592,13 @@ class GameEngine: ObservableObject {
         var fullResponse = ""
 
         do {
-            if streamingEnabled {
+            // Multi-model balancer path (optional; default OFF → local path below).
+            // When any load-balancing toggle is on, spread this turn across the
+            // enabled pool (local Ollama models / OpenRouter frontier / Nova).
+            // Any failure returns nil so the local path always keeps working.
+            if let balanced = await generateViaBalancerIfEnabled() {
+                fullResponse = balanced
+            } else if streamingEnabled {
                 try await ollamaService.chatStreaming(messages: conversationHistory) { chunk in
                     Task { @MainActor in
                         fullResponse += chunk
