@@ -410,6 +410,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.jordankoch.BlompieTVTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlompieTV.app/BlompieTV";
@@ -631,6 +632,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.jordankoch.BlompieTVTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = appletvos;
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BlompieTV.app/BlompieTV";
