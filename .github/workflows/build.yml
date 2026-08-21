@@ -26,18 +26,9 @@ jobs:
         XCODEPROJ=$(find . -name "*.xcodeproj" -maxdepth 2 | head -1)
         echo "Project: $XCODEPROJ"
 
-        SCHEME=BlompieTV
-
-        # Pick a concrete, available Apple TV simulator name (falls back to the
-        # generic name if none is enumerated).
-        SIM_NAME=$(xcrun simctl list devices available \
-          | grep -oE "Apple TV[^(]*" | head -1 | sed 's/[[:space:]]*$//')
-        if [ -z "$SIM_NAME" ]; then SIM_NAME="Apple TV"; fi
-        echo "Using simulator: $SIM_NAME"
-
         xcodebuild test \
           -project "$XCODEPROJ" \
-          -scheme "$SCHEME" \
-          -destination "platform=tvOS Simulator,name=$SIM_NAME" \
+          -scheme BlompieTV \
+          -destination 'platform=tvOS Simulator,name=Apple TV' \
           CODE_SIGNING_ALLOWED=NO \
           SWIFT_TREAT_WARNINGS_AS_ERRORS=NO
