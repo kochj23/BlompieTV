@@ -78,3 +78,7 @@ config.plist
 *.swo
 *~
 *.xcuserstate
+
+# SwiftPM resolved (never commit)
+Package.resolved
+**/xcshareddata/swiftpm/Package.resolved
