@@ -21,10 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Header status indicator (backend online / unreachable / AI off) and a last-turn source label; per-backend health and Test Connection in Settings.
 - AI output validation (reasoning tags, control characters, prompt echoes, empty/garbage replies, length and action caps).
 - OpenAI backend with its own Keychain key; on-screen key entry documented (iPhone Apple TV Keyboard).
-- Tests: 146 tests across unit, integration, functional, retry, performance, security and frame suites; `BlompieTVTests.swift` now runs.
+- Tests: 148 tests across unit, integration, functional, retry, performance, security and frame suites; `BlompieTVTests.swift` now runs.
 
 ### Changed
-- OpenRouter key moved from AIStudio's Keychain service (`com.jkoch.aistudio.openrouter`) to `com.jordankoch.BlompieTV.openrouter`, migrated automatically; attribution headers now say BlompieTV.
+- API keys use BlompieTV's own Keychain services `com.jkoch.blompietv.openrouter` and `com.jkoch.blompietv.openai`. Keys under AIStudio's `com.jkoch.aistudio.openrouter` or the interim `com.jordankoch.BlompieTV.*` names are migrated on first launch and the old items deleted. OpenRouter attribution headers now say BlompieTV.
+- Top Shelf extension version now follows the app version (fixes the version-mismatch build warning).
+- Local API `/api/status` reports the real app version.
+- README fully rewritten.
 - API keys are only sent over https.
 - Old server address/port/type and model settings are migrated into the new settings on first launch.
 - Ollama streaming now decodes UTF-8 correctly.

@@ -113,7 +113,9 @@ class GameEngine: ObservableObject {
     /// The task running the current turn (tests await it).
     private(set) var turnTask: Task<Void, Never>?
 
-    init(ai: LLMBalancerManager = .shared, defaults: UserDefaults = .standard, checkBackendsOnLaunch: Bool = true) {
+    /// `ai` nil → the shared manager (resolved here, on the main actor).
+    init(ai: LLMBalancerManager? = nil, defaults: UserDefaults = .standard, checkBackendsOnLaunch: Bool = true) {
+        let ai = ai ?? .shared
         self.ai = ai
         self.defaults = defaults
         Self.migrateLegacyServerSettings(defaults: defaults, into: ai)

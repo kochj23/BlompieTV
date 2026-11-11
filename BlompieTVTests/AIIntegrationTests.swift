@@ -191,10 +191,10 @@ final class AIIntegrationTests: XCTestCase {
     }
 
     func testOpenRouterKeyMigratesFromLegacyServiceOnce() {
-        let legacyService = "com.jordankoch.BlompieTV.tests.legacy.\(UUID().uuidString)"
+        let legacyService = "com.jkoch.blompietv.tests.legacy.\(UUID().uuidString)"
         let legacy = KeychainStore(service: legacyService)
         XCTAssertTrue(legacy.set("legacy-key"))
-        let f = AIFixture(legacyOpenRouterService: legacyService, handler: everythingDown)
+        let f = AIFixture(legacyOpenRouterServices: [legacyService], handler: everythingDown)
         defer { f.tearDown(); legacy.delete() }
         XCTAssertTrue(f.manager.hasOpenRouterKey)
         XCTAssertEqual(f.manager.openRouterAPIKey(), "legacy-key")
@@ -204,5 +204,36 @@ final class AIIntegrationTests: XCTestCase {
         XCTAssertTrue(legacy.set("older"))
         XCTAssertFalse(f.manager.openRouterKeychain.migrate(from: legacy))
         XCTAssertEqual(f.manager.openRouterAPIKey(), "legacy-key")
+    }
+
+    /// Both older names (interim BlompieTV name, then AIStudio's): the newest wins,
+    /// and every legacy copy is removed.
+    func testMigrationFromBothLegacyNamesPrefersNewestAndCleansUp() {
+        let id = UUID().uuidString
+        let interim = KeychainStore(service: "com.jkoch.blompietv.tests.interim.\(id)")
+        let aistudio = KeychainStore(service: "com.jkoch.blompietv.tests.aistudio.\(id)")
+        let interimOpenAI = KeychainStore(service: "com.jkoch.blompietv.tests.interim-openai.\(id)")
+        XCTAssertTrue(interim.set("interim-key"))
+        XCTAssertTrue(aistudio.set("aistudio-key"))
+        XCTAssertTrue(interimOpenAI.set("openai-key"))
+        let f = AIFixture(legacyOpenRouterServices: [interim.service, aistudio.service],
+                          legacyOpenAIServices: [interimOpenAI.service], handler: everythingDown)
+        defer { f.tearDown(); interim.delete(); aistudio.delete(); interimOpenAI.delete() }
+        XCTAssertEqual(f.manager.openRouterAPIKey(), "interim-key")
+        XCTAssertEqual(f.manager.openAIKeychain.get(), "openai-key")
+        XCTAssertTrue(f.manager.hasOpenAIKey)
+        XCTAssertNil(interim.get())
+        XCTAssertNil(aistudio.get(), "older copy removed too")
+        XCTAssertNil(interimOpenAI.get())
+    }
+
+    func testAIStudioOnlyKeyMigrates() {
+        let aistudio = KeychainStore(service: "com.jkoch.blompietv.tests.aistudio-only.\(UUID().uuidString)")
+        XCTAssertTrue(aistudio.set("old-key"))
+        let f = AIFixture(legacyOpenRouterServices: ["com.jkoch.blompietv.tests.missing.\(UUID().uuidString)", aistudio.service],
+                          handler: everythingDown)
+        defer { f.tearDown(); aistudio.delete() }
+        XCTAssertEqual(f.manager.openRouterAPIKey(), "old-key")
+        XCTAssertNil(aistudio.get())
     }
 }

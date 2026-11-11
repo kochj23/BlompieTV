@@ -149,13 +149,16 @@ final class LLMBalancerManager: ObservableObject {
     ///   - settingsKey/defaults: where the (secret-free) settings blob lives.
     ///   - keychainServicePrefix: per-app Keychain prefix; keys live at
     ///     `<prefix>.openrouter` and `<prefix>.openai`.
-    ///   - legacyOpenRouterService: an older service to migrate the OpenRouter key from (once).
+    ///   - legacyOpenRouterServices/legacyOpenAIServices: older services to migrate
+    ///     each key from (first non-empty wins); legacy items are removed once the
+    ///     new item holds a key.
     ///   - transport/sleep: injectable HTTP + backoff sleep (tests pass stubs).
     init(
         settingsKey: String = "BlompieTVLLMBalancerSettings",
         defaults: UserDefaults = .standard,
-        keychainServicePrefix: String = "com.jordankoch.BlompieTV",
-        legacyOpenRouterService: String? = OpenRouterProvider.legacyKeychainService,
+        keychainServicePrefix: String = "com.jkoch.blompietv",
+        legacyOpenRouterServices: [String] = OpenRouterProvider.legacyKeychainServices,
+        legacyOpenAIServices: [String] = ["com.jordankoch.BlompieTV.openai"],
         transport: HTTPTransport? = nil,
         sleep: @escaping RetrySleeper = Retry.realSleep
     ) {
@@ -173,8 +176,12 @@ final class LLMBalancerManager: ObservableObject {
         }
         openRouterKeychain = KeychainStore(service: "\(keychainServicePrefix).openrouter")
         openAIKeychain = KeychainStore(service: "\(keychainServicePrefix).openai")
-        if let legacyOpenRouterService {
-            openRouterKeychain.migrate(from: KeychainStore(service: legacyOpenRouterService))
+        for (store, legacy) in [(openRouterKeychain, legacyOpenRouterServices), (openAIKeychain, legacyOpenAIServices)] {
+            for service in legacy where service != store.service {
+                let old = KeychainStore(service: service, account: store.account)
+                store.migrate(from: old)
+                if store.hasValue { old.delete() } // never leave a stale copy of a secret behind
+            }
         }
         loadSettings()
         hasOpenRouterKey = openRouterKeychain.hasValue

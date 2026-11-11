@@ -12,7 +12,7 @@ import Security
 /// Minimal Keychain wrapper for storing secrets (e.g. API keys).
 ///
 /// Secrets are generic-password items under this app's own service name
-/// (`com.jordankoch.BlompieTV.<provider>`). Never store secrets in UserDefaults,
+/// (`com.jkoch.blompietv.<provider>`). Never store secrets in UserDefaults,
 /// files or environment variables.
 struct KeychainStore {
     let service: String

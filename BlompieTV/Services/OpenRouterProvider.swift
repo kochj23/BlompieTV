@@ -28,12 +28,13 @@ enum OpenRouterProvider {
     static let referer = "https://github.com/kochj23/BlompieTV"
     static let title = "BlompieTV"
 
-    /// BlompieTV's own Keychain service for the OpenRouter API key.
-    static let keychainService = "com.jordankoch.BlompieTV.openrouter"
-    /// Service name used before 2026-11 (borrowed from AIStudio). Read once,
-    /// copied to `keychainService`, then removed (tvOS Keychain is per-app, so
-    /// this item only ever belonged to BlompieTV).
-    static let legacyKeychainService = "com.jkoch.aistudio.openrouter"
+    /// BlompieTV's own Keychain service for the OpenRouter API key
+    /// (`com.jkoch.<game>.<provider>`, same convention as the other games).
+    static let keychainService = "com.jkoch.blompietv.openrouter"
+    /// Older service names, newest first: the interim 1.1.0 name and the one
+    /// borrowed from AIStudio. Read once, copied to `keychainService`, then
+    /// removed (tvOS Keychain is per-app, so these items only ever belonged to BlompieTV).
+    static let legacyKeychainServices = ["com.jordankoch.BlompieTV.openrouter", "com.jkoch.aistudio.openrouter"]
 
     /// Hardcoded fallback model list used when the live `/models` fetch fails.
     /// A few popular current models spanning providers.

@@ -194,7 +194,7 @@ final class AIUnitTests: XCTestCase {
         f.manager.setModel("qwen3:8b", for: .ollama)
 
         let again = LLMBalancerManager(settingsKey: "AITestSettings", defaults: f.defaults,
-                                       keychainServicePrefix: f.keychainPrefix, legacyOpenRouterService: nil,
+                                       keychainServicePrefix: f.keychainPrefix, legacyOpenRouterServices: [], legacyOpenAIServices: [],
                                        transport: f.http.transport)
         XCTAssertEqual(again.url(for: .ollama), "http://10.0.0.9:11434")
         XCTAssertEqual(again.selectedBackend, .tinyChat)

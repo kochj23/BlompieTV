@@ -16,16 +16,18 @@ import XCTest
 final class AISecurityTests: XCTestCase {
 
     func testKeychainServicesBelongToBlompieTV() {
-        XCTAssertEqual(OpenRouterProvider.keychainService, "com.jordankoch.BlompieTV.openrouter")
+        XCTAssertEqual(OpenRouterProvider.keychainService, "com.jkoch.blompietv.openrouter")
         XCTAssertFalse(OpenRouterProvider.keychainService.contains("aistudio"))
-        XCTAssertEqual(LLMBalancerManager.shared.openRouterKeychain.service, "com.jordankoch.BlompieTV.openrouter")
-        XCTAssertEqual(LLMBalancerManager.shared.openAIKeychain.service, "com.jordankoch.BlompieTV.openai")
+        XCTAssertEqual(LLMBalancerManager.shared.openRouterKeychain.service, "com.jkoch.blompietv.openrouter")
+        XCTAssertEqual(LLMBalancerManager.shared.openAIKeychain.service, "com.jkoch.blompietv.openai")
+        XCTAssertEqual(OpenRouterProvider.legacyKeychainServices,
+                       ["com.jordankoch.BlompieTV.openrouter", "com.jkoch.aistudio.openrouter"])
         XCTAssertEqual(OpenRouterProvider.title, "BlompieTV")
         XCTAssertTrue(OpenRouterProvider.referer.hasSuffix("/BlompieTV"))
     }
 
     func testKeychainRoundTripUnderTestService() {
-        let store = KeychainStore(service: "com.jordankoch.BlompieTV.tests.\(UUID().uuidString)")
+        let store = KeychainStore(service: "com.jkoch.blompietv.tests.\(UUID().uuidString)")
         defer { store.delete() }
         XCTAssertNil(store.get())
         XCTAssertTrue(store.set("first"))

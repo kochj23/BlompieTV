@@ -78,17 +78,19 @@ struct AIFixture {
     let sleeps: SleepRecorder
 
     /// A manager wired to a stub transport, its own defaults suite and its own Keychain services.
-    init(legacyOpenRouterService: String? = nil, keychainPrefix: String? = nil, handler: @escaping StubHTTP.Handler) {
+    init(legacyOpenRouterServices: [String] = [], legacyOpenAIServices: [String] = [],
+         keychainPrefix: String? = nil, handler: @escaping StubHTTP.Handler) {
         suiteName = "BlompieTVTests.\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)!
-        self.keychainPrefix = keychainPrefix ?? "com.jordankoch.BlompieTV.tests.\(UUID().uuidString)"
+        self.keychainPrefix = keychainPrefix ?? "com.jkoch.blompietv.tests.\(UUID().uuidString)"
         http = StubHTTP(handler)
         sleeps = SleepRecorder()
         manager = LLMBalancerManager(
             settingsKey: "AITestSettings",
             defaults: defaults,
             keychainServicePrefix: self.keychainPrefix,
-            legacyOpenRouterService: legacyOpenRouterService,
+            legacyOpenRouterServices: legacyOpenRouterServices,
+            legacyOpenAIServices: legacyOpenAIServices,
             transport: http.transport,
             sleep: sleeps.sleeper
         )
