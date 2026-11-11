@@ -1,6 +1,6 @@
 //
 //  OpenRouterProvider.swift
-//  AIStudio
+//  BlompieTV (originally from AIStudio)
 //
 //  Created by Jordan Koch on 2026-02-19.
 //  Copyright © 2026 Jordan Koch. All rights reserved.
@@ -25,11 +25,15 @@ enum OpenRouterProvider {
     static var modelsURL: String { "\(baseURL)/models" }
 
     /// Attribution headers required/recommended by OpenRouter.
-    static let referer = "https://github.com/kochj23/AIStudio"
-    static let title = "AIStudio"
+    static let referer = "https://github.com/kochj23/BlompieTV"
+    static let title = "BlompieTV"
 
-    /// macOS Keychain service used to store the OpenRouter API key.
-    static let keychainService = "com.jkoch.aistudio.openrouter"
+    /// BlompieTV's own Keychain service for the OpenRouter API key.
+    static let keychainService = "com.jordankoch.BlompieTV.openrouter"
+    /// Service name used before 2026-11 (borrowed from AIStudio). Read once,
+    /// copied to `keychainService`, then removed (tvOS Keychain is per-app, so
+    /// this item only ever belonged to BlompieTV).
+    static let legacyKeychainService = "com.jkoch.aistudio.openrouter"
 
     /// Hardcoded fallback model list used when the live `/models` fetch fails.
     /// A few popular current models spanning providers.
@@ -107,8 +111,13 @@ enum OpenAICompatibleRequest {
         stream: Bool,
         headers: [String: String] = [:]
     ) throws -> URLRequest {
-        guard let url = URL(string: endpoint) else {
+        guard let url = URL(string: endpoint), url.scheme != nil, url.host != nil else {
             throw LLMError.invalidURL
+        }
+        // Never send a credential over plain http.
+        if headers.keys.contains(where: { $0.caseInsensitiveCompare("Authorization") == .orderedSame }),
+           url.scheme?.lowercased() != "https" {
+            throw LLMError.insecureEndpoint
         }
 
         var request = URLRequest(url: url)
@@ -137,8 +146,8 @@ enum OpenAICompatibleRequest {
 /// of per-backend availability, pick which backend to use. No network here so it
 /// is fully unit-testable; the manager injects live availability.
 enum FailoverPlanner {
-    /// Default ordered preference chain: local-first, then frontier.
-    static let defaultChain: [LLMBackendType] = [.ollama, .mlx, .openRouter]
+    /// Default ordered preference chain: the canonical Auto order.
+    static let defaultChain: [LLMBackendType] = LLMBackendType.autoOrder
 
     /// The ordered subset of `chain` that is currently available.
     static func orderedHealthy(

@@ -9,6 +9,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 struct GameMessage: Identifiable, Codable {
     let id: UUID
@@ -28,6 +29,8 @@ struct GameState: Codable {
     var currentActions: [String]
     var slotName: String
     var savedDate: Date
+    /// Where the scripted narrator is (nil in saves made before 2026-11).
+    var scriptedSceneID: String? = nil
 }
 
 struct SaveSlot: Identifiable, Codable {
@@ -69,8 +72,12 @@ class GameEngine: ObservableObject {
     @Published var currentActions: [String] = []
     @Published var isLoading: Bool = false
     @Published var streamingText: String = ""
-    @Published var selectedModel: String = "mistral"
-    @Published var availableModels: [String] = []
+
+    /// Global "Use AI" switch. Off → every turn is narrated by `ScriptedNarrator`
+    /// and no network call is made.
+    @Published var aiEnabled: Bool = true
+    /// Where the last turn's narration came from (shown in the header).
+    @Published private(set) var lastNarrationSource: NarrationSource = .none
 
     // Settings
     @Published var fontSize: Double = 32 // Larger for TV
@@ -90,74 +97,110 @@ class GameEngine: ObservableObject {
     @Published var randomModelMode: Bool = false
     @Published var actionsUntilModelSwitch: Int = 5
 
-    // Error display
-    @Published var errorMessage: String = ""
-    @Published var showError: Bool = false
-
     var stateHistory: [GameSnapshot] = []
     private var actionsSinceModelSwitch: Int = 0
 
-    private var conversationHistory: [OllamaMessage] = []
-    let ollamaService = OllamaService()
+    private(set) var conversationHistory: [OllamaMessage] = []
+    /// Current place in the scripted world (used whenever the AI doesn't narrate).
+    private(set) var scriptedSceneID: String = ScriptedNarrator.startSceneID
 
-    init() {
+    /// Backend choice, endpoints, keys, failover and status (canonical manager).
+    let ai: LLMBalancerManager
+    private let streamer = OllamaService()
+    private let defaults: UserDefaults
+    private var aiChanges: AnyCancellable?
+
+    /// The task running the current turn (tests await it).
+    private(set) var turnTask: Task<Void, Never>?
+
+    init(ai: LLMBalancerManager = .shared, defaults: UserDefaults = .standard, checkBackendsOnLaunch: Bool = true) {
+        self.ai = ai
+        self.defaults = defaults
+        Self.migrateLegacyServerSettings(defaults: defaults, into: ai)
         loadSettings()
         initializeAchievements()
-        Task {
-            await refreshAvailableModels()
+        // Views observe the engine; forward manager changes (status, models).
+        aiChanges = ai.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        if checkBackendsOnLaunch && aiEnabled {
+            Task {
+                await ai.refreshStatus()
+                await ai.refreshAvailableModels()
+            }
         }
     }
 
+    // MARK: - AI settings bridge
+
+    /// The model for the backend the model picker edits.
+    var selectedModel: String {
+        get { ai.currentModel }
+        set { ai.setModel(newValue, for: ai.modelPickerBackend) }
+    }
+
+    var availableModels: [String] { ai.availableModels }
+
     func refreshAvailableModels() async {
-        do {
-            let models = try await ollamaService.fetchInstalledModels()
-            availableModels = models.isEmpty ? ["mistral", "llama3.2", "llama3.1", "codellama", "phi"] : models
-        } catch {
-            availableModels = ["mistral", "llama3.2", "llama3.1", "codellama", "phi"]
+        await ai.refreshAvailableModels()
+    }
+
+    /// One-time move of the pre-2026-11 server settings (address/port/type and
+    /// Ollama model) into the manager, then removal of the old keys.
+    static func migrateLegacyServerSettings(defaults: UserDefaults, into ai: LLMBalancerManager) {
+        if let address = defaults.string(forKey: "BlompieTVServerAddress") {
+            let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                let port = defaults.integer(forKey: "BlompieTVServerPort")
+                let type = defaults.string(forKey: "BlompieTVServerType").flatMap(AIServerType.init(rawValue:)) ?? .ollama
+                ai.setURL("http://\(trimmed):\(port > 0 ? port : 11434)", for: type.backend)
+            }
+        }
+        if let model = defaults.string(forKey: "BlompieTVSelectedModel"), !model.isEmpty {
+            ai.setModel(model, for: .ollama)
+        }
+        for key in ["BlompieTVServerAddress", "BlompieTVServerPort", "BlompieTVServerType", "BlompieTVSelectedModel"] {
+            defaults.removeObject(forKey: key)
         }
     }
 
     func saveSettings() {
-        UserDefaults.standard.set(fontSize, forKey: "BlompieTVFontSize")
-        UserDefaults.standard.set(streamingEnabled, forKey: "BlompieTVStreamingEnabled")
-        UserDefaults.standard.set(temperature, forKey: "BlompieTVTemperature")
-        UserDefaults.standard.set(detailLevel.rawValue, forKey: "BlompieTVDetailLevel")
-        UserDefaults.standard.set(toneStyle.rawValue, forKey: "BlompieTVToneStyle")
-        UserDefaults.standard.set(autoSaveEnabled, forKey: "BlompieTVAutoSaveEnabled")
-        UserDefaults.standard.set(selectedModel, forKey: "BlompieTVSelectedModel")
-        UserDefaults.standard.set(randomModelMode, forKey: "BlompieTVRandomModelMode")
-        UserDefaults.standard.set(actionsUntilModelSwitch, forKey: "BlompieTVActionsUntilModelSwitch")
+        defaults.set(aiEnabled, forKey: "BlompieTVAIEnabled")
+        defaults.set(fontSize, forKey: "BlompieTVFontSize")
+        defaults.set(streamingEnabled, forKey: "BlompieTVStreamingEnabled")
+        defaults.set(temperature, forKey: "BlompieTVTemperature")
+        defaults.set(detailLevel.rawValue, forKey: "BlompieTVDetailLevel")
+        defaults.set(toneStyle.rawValue, forKey: "BlompieTVToneStyle")
+        defaults.set(autoSaveEnabled, forKey: "BlompieTVAutoSaveEnabled")
+        defaults.set(randomModelMode, forKey: "BlompieTVRandomModelMode")
+        defaults.set(actionsUntilModelSwitch, forKey: "BlompieTVActionsUntilModelSwitch")
     }
 
     private func loadSettings() {
-        fontSize = UserDefaults.standard.double(forKey: "BlompieTVFontSize")
+        aiEnabled = defaults.object(forKey: "BlompieTVAIEnabled") as? Bool ?? true
+        fontSize = defaults.double(forKey: "BlompieTVFontSize")
         if fontSize == 0 { fontSize = 32 } // Larger for TV
 
-        streamingEnabled = UserDefaults.standard.object(forKey: "BlompieTVStreamingEnabled") as? Bool ?? true
-        temperature = UserDefaults.standard.double(forKey: "BlompieTVTemperature")
+        streamingEnabled = defaults.object(forKey: "BlompieTVStreamingEnabled") as? Bool ?? true
+        temperature = defaults.double(forKey: "BlompieTVTemperature")
         if temperature == 0 { temperature = 1.3 }
 
-        if let detailStr = UserDefaults.standard.string(forKey: "BlompieTVDetailLevel"),
+        if let detailStr = defaults.string(forKey: "BlompieTVDetailLevel"),
            let detail = DetailLevel(rawValue: detailStr) {
             detailLevel = detail
         }
 
-        if let toneStr = UserDefaults.standard.string(forKey: "BlompieTVToneStyle"),
+        if let toneStr = defaults.string(forKey: "BlompieTVToneStyle"),
            let tone = ToneStyle(rawValue: toneStr) {
             toneStyle = tone
         }
 
-        autoSaveEnabled = UserDefaults.standard.object(forKey: "BlompieTVAutoSaveEnabled") as? Bool ?? true
-        randomModelMode = UserDefaults.standard.object(forKey: "BlompieTVRandomModelMode") as? Bool ?? false
+        autoSaveEnabled = defaults.object(forKey: "BlompieTVAutoSaveEnabled") as? Bool ?? true
+        randomModelMode = defaults.object(forKey: "BlompieTVRandomModelMode") as? Bool ?? false
 
-        let savedSwitchCount = UserDefaults.standard.integer(forKey: "BlompieTVActionsUntilModelSwitch")
+        let savedSwitchCount = defaults.integer(forKey: "BlompieTVActionsUntilModelSwitch")
         if savedSwitchCount > 0 {
             actionsUntilModelSwitch = savedSwitchCount
         }
 
-        if let model = UserDefaults.standard.string(forKey: "BlompieTVSelectedModel") {
-            selectedModel = model
-        }
     }
 
     func resetSettings() {
@@ -169,7 +212,8 @@ class GameEngine: ObservableObject {
         autoSaveEnabled = true
         randomModelMode = false
         actionsUntilModelSwitch = 5
-        selectedModel = "mistral"
+        aiEnabled = true
+        ai.setModel("", for: ai.modelPickerBackend)
         saveSettings()
     }
 
@@ -183,6 +227,7 @@ class GameEngine: ObservableObject {
             "Locations Visited": "\(locationHistory.count)",
             "Achievements": "\(achievements.filter { $0.isUnlocked }.count)/\(achievements.count)",
             "Current Model": selectedModel,
+            "Narrator": aiEnabled ? (ai.activeBackend?.displayName ?? "AI (offline)") : "Scripted",
             "Last Token/sec": lastTokensPerSecond > 0 ? String(format: "%.1f", lastTokensPerSecond) : "N/A",
             "Saves": "\(getSaveSlots().count)",
             "Messages": "\(messages.count)"
@@ -289,12 +334,12 @@ class GameEngine: ObservableObject {
 
     private func saveAchievements() {
         if let encoded = try? JSONEncoder().encode(achievements) {
-            UserDefaults.standard.set(encoded, forKey: "BlompieTVAchievements")
+            defaults.set(encoded, forKey: "BlompieTVAchievements")
         }
     }
 
     private func loadAchievements() {
-        guard let data = UserDefaults.standard.data(forKey: "BlompieTVAchievements"),
+        guard let data = defaults.data(forKey: "BlompieTVAchievements"),
               let saved = try? JSONDecoder().decode([Achievement].self, from: data) else {
             return
         }
@@ -452,19 +497,24 @@ class GameEngine: ObservableObject {
         inventory = []
         locationHistory = []
         stateHistory = []
+        scriptedSceneID = ScriptedNarrator.startSceneID
 
         addMessage("=== BLOMPIE TV ===")
-        addMessage("A Text Adventure Powered by AI")
+        addMessage("A Text Adventure")
         addMessage("")
         addMessage("Initializing game world...")
         addMessage("")
 
-        Task {
-            await generateInitialScene()
-        }
+        conversationHistory.append(OllamaMessage(role: "system", content: generateSystemPrompt()))
+        conversationHistory.append(OllamaMessage(
+            role: "user",
+            content: "Start a new text adventure. Describe the opening scene and provide the first set of actions."
+        ))
+        turnTask = Task { await runTurn(action: nil) }
     }
 
     func performAction(_ action: String) {
+        guard !isLoading else { return }
         // Save state before action for undo
         saveStateSnapshot()
 
@@ -475,7 +525,7 @@ class GameEngine: ObservableObject {
         }
 
         // Random model switching
-        if randomModelMode {
+        if randomModelMode && aiEnabled {
             actionsSinceModelSwitch += 1
             if actionsSinceModelSwitch >= actionsUntilModelSwitch {
                 switchToRandomModel()
@@ -486,9 +536,8 @@ class GameEngine: ObservableObject {
         addMessage("> \(action)")
         addMessage("")
 
-        Task {
-            await sendMessageToOllama(action)
-        }
+        conversationHistory.append(OllamaMessage(role: "user", content: action))
+        turnTask = Task { await runTurn(action: action) }
     }
 
     private func switchToRandomModel() {
@@ -529,125 +578,110 @@ class GameEngine: ObservableObject {
         }
     }
 
-    private func generateInitialScene() async {
+    // MARK: - Turn
+
+    /// Narrate one turn. Never fails: when AI is off, no backend answers, or the
+    /// reply fails validation, the scripted narrator tells the turn instead.
+    /// `action` is nil for the opening scene.
+    private func runTurn(action: String?) async {
         isLoading = true
+        defer { isLoading = false }
 
-        conversationHistory.append(OllamaMessage(
-            role: "system",
-            content: generateSystemPrompt()
-        ))
+        if aiEnabled, let reply = await aiNarration() {
+            let parsed = Self.parseResponse(reply)
+            if !parsed.narrative.isEmpty {
+                conversationHistory.append(OllamaMessage(role: "assistant", content: reply))
+                apply(narrative: parsed.narrative, actions: parsed.actions, trackingText: reply)
+                lastNarrationSource = .ai(backend: ai.activeBackend?.displayName ?? "AI")
+                autosaveIfEnabled()
+                return
+            }
+        }
 
-        conversationHistory.append(OllamaMessage(
-            role: "user",
-            content: "Start a new text adventure. Describe the opening scene and provide the first set of actions."
-        ))
-
-        await sendToOllama()
-        isLoading = false
+        // Scripted turn. Its text is shown but never fed back to the model, so
+        // drop the unanswered user message to keep the history well-formed.
+        if conversationHistory.last?.role == "user" { conversationHistory.removeLast() }
+        let turn = action.map { ScriptedNarrator.respond(to: $0, in: scriptedSceneID) } ?? ScriptedNarrator.opening()
+        scriptedSceneID = turn.sceneID
+        apply(narrative: turn.text, actions: turn.actions, trackingText: turn.text)
+        lastNarrationSource = aiEnabled ? .scriptedFallback : .scriptedAIOff
+        autosaveIfEnabled()
     }
 
-    private func sendMessageToOllama(_ userMessage: String) async {
-        isLoading = true
+    /// Ask the AI for the next reply. Returns validated text, or nil on any
+    /// failure (nothing reachable, error, timeout, invalid output).
+    private func aiNarration() async -> String? {
+        streamingText = ""
+        defer { streamingText = "" }
 
-        conversationHistory.append(OllamaMessage(
-            role: "user",
-            content: userMessage
-        ))
-
-        await sendToOllama()
-        isLoading = false
-    }
-
-    /// Optional multi-model balanced generation. Returns nil when no balancing
-    /// toggle is enabled (the default) or when the balanced pool can't answer, so
-    /// the caller always falls back to the existing local Ollama path. Nova and
-    /// cloud are never required.
-    private func generateViaBalancerIfEnabled() async -> String? {
-        let manager = LLMBalancerManager.shared
-        guard manager.isBalancingEnabled else { return nil }
+        // Live streaming when the turn would go to Ollama anyway.
+        var streamToOllama = false
+        if streamingEnabled && !ai.isBalancingEnabled {
+            if ai.selectedBackend == .ollama {
+                streamToOllama = true
+            } else if ai.selectedBackend == .auto && ai.isConfigured(.ollama) {
+                streamToOllama = await ai.isHealthy(.ollama)
+            }
+        }
+        if streamToOllama {
+            do {
+                let streamed = try await streamer.chatStreaming(
+                    baseURL: ai.url(for: .ollama),
+                    model: ai.model(for: .ollama),
+                    temperature: temperature,
+                    messages: conversationHistory,
+                    onChunk: { partial in
+                        Task { @MainActor in self.streamingText = partial }
+                    },
+                    onComplete: { tps in
+                        Task { @MainActor in if let tps { self.lastTokensPerSecond = tps } }
+                    }
+                )
+                ai.recordResult(.ollama, ok: true)
+                if let clean = NarrationValidator.sanitize(streamed) { return clean }
+            } catch {
+                ai.recordResult(.ollama, ok: false)
+            }
+            streamingText = ""
+        }
 
         let systemPrompt = conversationHistory.first { $0.role == "system" }?.content
         let history = conversationHistory.map {
             ChatMessage(role: ChatRole(rawValue: $0.role) ?? .user, content: $0.content)
         }
         let prompt = conversationHistory.last?.content ?? ""
-
         do {
-            return try await manager.generate(
+            let reply = try await ai.generate(
                 messages: history,
                 systemPrompt: systemPrompt,
                 prompt: prompt,
                 temperature: Float(temperature),
                 maxTokens: 2048
             )
+            return NarrationValidator.sanitize(reply)
         } catch {
             return nil
         }
     }
 
-    private func sendToOllama() async {
-        ollamaService.model = selectedModel
-        ollamaService.temperature = temperature
-        streamingText = ""
-        var fullResponse = ""
-
-        do {
-            // Multi-model balancer path (optional; default OFF → local path below).
-            // When any load-balancing toggle is on, spread this turn across the
-            // enabled pool (local Ollama models / OpenRouter frontier / Nova).
-            // Any failure returns nil so the local path always keeps working.
-            if let balanced = await generateViaBalancerIfEnabled() {
-                fullResponse = balanced
-            } else if streamingEnabled {
-                try await ollamaService.chatStreaming(messages: conversationHistory) { chunk in
-                    Task { @MainActor in
-                        fullResponse += chunk
-                        self.streamingText = fullResponse
-                    }
-                } onComplete: { tokensPerSecond in
-                    Task { @MainActor in
-                        if let tps = tokensPerSecond {
-                            self.lastTokensPerSecond = tps
-                        }
-                    }
-                }
-            } else {
-                fullResponse = try await ollamaService.chat(messages: conversationHistory)
-            }
-
-            conversationHistory.append(OllamaMessage(
-                role: "assistant",
-                content: fullResponse
-            ))
-
-            streamingText = ""
-
-            // Parse response to extract narrative and actions
-            parseOllamaResponse(fullResponse)
-
-            if autoSaveEnabled {
-                saveGame(toSlot: "autosave")
-            }
-        } catch {
-            streamingText = ""
-            addMessage("=== ERROR ===")
-            if let ollamaError = error as? OllamaError {
-                addMessage(ollamaError.errorDescription ?? error.localizedDescription)
-            } else {
-                addMessage("Error: \(error.localizedDescription)")
-            }
-            addMessage("")
-            addMessage("Troubleshooting:")
-            addMessage("1. Go to Settings and configure your AI server")
-            addMessage("2. Make sure Ollama or OpenWebUI is running")
-            addMessage("3. Verify the \(selectedModel) model is installed")
-
-            errorMessage = error.localizedDescription
-            showError = true
+    private func autosaveIfEnabled() {
+        if autoSaveEnabled {
+            saveGame(toSlot: "autosave")
         }
     }
 
-    private func parseOllamaResponse(_ response: String) {
+    private func apply(narrative: String, actions: [String], trackingText: String) {
+        if !narrative.isEmpty {
+            addMessage(narrative)
+            addMessage("")
+        }
+        let clean = NarrationValidator.sanitizeActions(actions)
+        currentActions = clean.isEmpty ? NarrationValidator.defaultActions : clean
+        parseAndTrackGameElements(trackingText)
+    }
+
+    /// Split a model reply into narrative and actions. Pure (unit-tested).
+    nonisolated static func parseResponse(_ response: String) -> (narrative: String, actions: [String]) {
         let lines = response.components(separatedBy: .newlines)
         var narrativeLines: [String] = []
         var actions: [String] = []
@@ -735,23 +769,8 @@ class GameEngine: ObservableObject {
             }
         }
 
-        // Add narrative to messages
-        let narrative = narrativeLines.joined(separator: "\n")
-        if !narrative.isEmpty {
-            addMessage(narrative)
-            addMessage("")
-        }
-
-        // Update current actions
-        currentActions = actions.filter { !$0.isEmpty }
-
-        // If no actions were found, provide default exploration actions
-        if currentActions.isEmpty {
-            currentActions = ["Look around", "Continue", "Go back", "Examine surroundings"]
-        }
-
-        // Track NPCs, inventory, locations, and check achievements
-        parseAndTrackGameElements(response)
+        let narrative = narrativeLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        return (narrative, actions.filter { !$0.isEmpty })
     }
 
     private func addMessage(_ text: String) {
@@ -766,17 +785,18 @@ class GameEngine: ObservableObject {
             conversationHistory: conversationHistory,
             currentActions: currentActions,
             slotName: slotName,
-            savedDate: Date()
+            savedDate: Date(),
+            scriptedSceneID: scriptedSceneID
         )
 
         if let encoded = try? JSONEncoder().encode(state) {
-            UserDefaults.standard.set(encoded, forKey: "BlompieTVGameState_\(slotName)")
+            defaults.set(encoded, forKey: "BlompieTVGameState_\(slotName)")
             updateSaveSlotMetadata(slotName: slotName, messageCount: messages.count)
         }
     }
 
     func loadGame(fromSlot slotName: String = "autosave") {
-        guard let data = UserDefaults.standard.data(forKey: "BlompieTVGameState_\(slotName)"),
+        guard let data = defaults.data(forKey: "BlompieTVGameState_\(slotName)"),
               let state = try? JSONDecoder().decode(GameState.self, from: data) else {
             return
         }
@@ -784,10 +804,11 @@ class GameEngine: ObservableObject {
         messages = state.messages
         conversationHistory = state.conversationHistory
         currentActions = state.currentActions
+        scriptedSceneID = state.scriptedSceneID ?? ScriptedNarrator.startSceneID
     }
 
     func getSaveSlots() -> [SaveSlot] {
-        guard let data = UserDefaults.standard.data(forKey: "BlompieTVSaveSlots"),
+        guard let data = defaults.data(forKey: "BlompieTVSaveSlots"),
               let slots = try? JSONDecoder().decode([SaveSlot].self, from: data) else {
             return []
         }
@@ -800,16 +821,16 @@ class GameEngine: ObservableObject {
         slots.append(SaveSlot(id: slotName, name: slotName, savedDate: Date(), messageCount: messageCount))
 
         if let encoded = try? JSONEncoder().encode(slots) {
-            UserDefaults.standard.set(encoded, forKey: "BlompieTVSaveSlots")
+            defaults.set(encoded, forKey: "BlompieTVSaveSlots")
         }
     }
 
     func deleteSaveSlot(_ slotName: String) {
-        UserDefaults.standard.removeObject(forKey: "BlompieTVGameState_\(slotName)")
+        defaults.removeObject(forKey: "BlompieTVGameState_\(slotName)")
         var slots = getSaveSlots()
         slots.removeAll { $0.id == slotName }
         if let encoded = try? JSONEncoder().encode(slots) {
-            UserDefaults.standard.set(encoded, forKey: "BlompieTVSaveSlots")
+            defaults.set(encoded, forKey: "BlompieTVSaveSlots")
         }
     }
 
@@ -818,7 +839,7 @@ class GameEngine: ObservableObject {
     func exportTranscript() -> String {
         var transcript = "=== BLOMPIE TV GAME TRANSCRIPT ===\n"
         transcript += "Exported: \(Date().formatted())\n"
-        transcript += "Model: \(selectedModel)\n"
+        transcript += "Narrator: \(aiEnabled ? "AI, \(ai.modelPickerBackend.displayName) / \(selectedModel)" : "scripted")\n"
         transcript += "Total Messages: \(messages.count)\n"
         transcript += "\n" + String(repeating: "=", count: 50) + "\n\n"
 

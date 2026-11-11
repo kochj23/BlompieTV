@@ -224,72 +224,81 @@ final class OllamaErrorTests: XCTestCase {
     }
 }
 
-// MARK: - AI Backend Tests
+// MARK: - AI Backend Tests (canonical LLMBackendType; replaces the removed AIBackend enum)
 
 final class AIBackendTests: XCTestCase {
 
     func testAllCases() {
-        XCTAssertEqual(AIBackend.allCases.count, 5)
+        XCTAssertEqual(LLMBackendType.allCases.map(\.rawValue),
+                       ["auto", "ollama", "mlx", "tinyllm", "tinychat", "openwebui", "novagateway", "openrouter", "openai"])
     }
 
     func testIcons() {
-        for backend in AIBackend.allCases {
+        for backend in LLMBackendType.allCases {
             XCTAssertFalse(backend.icon.isEmpty, "\(backend.rawValue) should have an icon")
         }
     }
 
     func testDescriptions() {
-        for backend in AIBackend.allCases {
+        for backend in LLMBackendType.allCases {
             XCTAssertFalse(backend.description.isEmpty, "\(backend.rawValue) should have a description")
+            XCTAssertFalse(backend.displayName.isEmpty)
         }
     }
 
     func testAttribution() {
-        XCTAssertNotNil(AIBackend.tinyLLM.attribution)
-        XCTAssertNotNil(AIBackend.tinyChat.attribution)
-        XCTAssertNotNil(AIBackend.openWebUI.attribution)
-        XCTAssertNil(AIBackend.ollama.attribution)
-        XCTAssertNil(AIBackend.auto.attribution)
+        XCTAssertNotNil(LLMBackendType.tinyLLM.attribution)
+        XCTAssertNotNil(LLMBackendType.tinyChat.attribution)
+        XCTAssertNotNil(LLMBackendType.openWebUI.attribution)
+        XCTAssertNil(LLMBackendType.ollama.attribution)
+        XCTAssertNil(LLMBackendType.auto.attribution)
     }
 
     func testCodable() throws {
-        for backend in AIBackend.allCases {
+        for backend in LLMBackendType.allCases {
             let data = try JSONEncoder().encode(backend)
-            let decoded = try JSONDecoder().decode(AIBackend.self, from: data)
+            let decoded = try JSONDecoder().decode(LLMBackendType.self, from: data)
             XCTAssertEqual(decoded, backend)
         }
+    }
+
+    func testServerTypeMapsToCanonicalBackend() {
+        XCTAssertEqual(AIServerType.ollama.backend, .ollama)
+        XCTAssertEqual(AIServerType.openwebui.backend, .openWebUI)
     }
 }
 
 final class AIBackendSettingsTests: XCTestCase {
 
     func testSettingsCodable() throws {
-        let settings = AIBackendSettings(
-            selectedBackend: .ollama,
-            ollamaBaseURL: "http://localhost:11434",
-            selectedOllamaModel: "mistral:latest",
-            tinyLLMServerURL: "http://localhost:8000",
-            tinyChatServerURL: "http://localhost:8000",
-            openWebUIServerURL: "http://localhost:8080"
+        let settings = LLMBalancerManager.Persisted(
+            useAllLocalModels: false, enableAllFrontierModels: false, useNovaGateway: true,
+            ollamaBaseURL: "http://192.168.1.5:11434", novaGatewayURL: "http://10.0.0.2:18792",
+            selectedBackend: .tinyLLM, tinyLLMURL: "http://10.0.0.3:8000", tinyChatURL: nil,
+            openWebUIURL: nil, openAIBaseURL: "https://api.openai.com/v1", models: ["ollama": "mistral:latest"]
         )
-
         let data = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(AIBackendSettings.self, from: data)
+        let decoded = try JSONDecoder().decode(LLMBalancerManager.Persisted.self, from: data)
+        XCTAssertEqual(decoded, settings)
+    }
 
-        XCTAssertEqual(decoded.selectedBackend, .ollama)
-        XCTAssertEqual(decoded.ollamaBaseURL, "http://localhost:11434")
-        XCTAssertEqual(decoded.selectedOllamaModel, "mistral:latest")
+    func testPreParitySettingsBlobStillDecodes() throws {
+        let old = #"{"useAllLocalModels":true,"enableAllFrontierModels":false,"useNovaGateway":false,"ollamaBaseURL":"http://h:11434","novaGatewayURL":"http://127.0.0.1:18792"}"#
+        let decoded = try JSONDecoder().decode(LLMBalancerManager.Persisted.self, from: Data(old.utf8))
+        XCTAssertTrue(decoded.useAllLocalModels)
+        XCTAssertNil(decoded.selectedBackend)
+        XCTAssertNil(decoded.models)
     }
 }
 
 final class AIBackendErrorTests: XCTestCase {
 
     func testErrorDescriptions() {
-        XCTAssertNotNil(AIBackendError.noBackendAvailable.errorDescription)
-        XCTAssertNotNil(AIBackendError.invalidConfiguration.errorDescription)
-        XCTAssertNotNil(AIBackendError.invalidState.errorDescription)
-        XCTAssertNotNil(AIBackendError.generationFailed("test").errorDescription)
-        XCTAssertTrue(AIBackendError.generationFailed("test failure").errorDescription!.contains("test failure"))
+        let all: [LLMError] = [.noBackendAvailable, .invalidURL, .invalidResponse, .httpError(503),
+                               .noResponse, .mlxNotAvailable, .insecureEndpoint, .missingAPIKey]
+        for e in all { XCTAssertFalse((e.errorDescription ?? "").isEmpty) }
+        XCTAssertTrue(LLMError.httpError(503).errorDescription!.contains("503"))
+        XCTAssertTrue(LLMError.insecureEndpoint.errorDescription!.contains("https"))
     }
 }
 
@@ -345,7 +354,7 @@ final class SecurityTests: XCTestCase {
             "Bearer [a-zA-Z0-9._-]{20,}",
         ]
 
-        let sourceFiles = findSwiftFiles(in: "/Volumes/Data/xcode/BlompieTV/BlompieTV")
+        let sourceFiles = findSwiftFiles(in: Self.appSourceDir)
 
         for file in sourceFiles {
             guard let content = try? String(contentsOfFile: file, encoding: .utf8) else { continue }
@@ -359,7 +368,7 @@ final class SecurityTests: XCTestCase {
 
     func testNovaAPIServerBindsToLoopback() {
         // The Nova API server should only bind to 127.0.0.1
-        let serverFile = "/Volumes/Data/xcode/BlompieTV/BlompieTV/NovaAPIServer.swift"
+        let serverFile = "\(Self.appSourceDir)/NovaAPIServer.swift"
         guard let content = try? String(contentsOfFile: serverFile, encoding: .utf8) else {
             XCTFail("Could not read NovaAPIServer.swift")
             return
@@ -371,7 +380,7 @@ final class SecurityTests: XCTestCase {
 
     func testServerPortIsCorrect() {
         // BlompieTV should use port 37427
-        let serverFile = "/Volumes/Data/xcode/BlompieTV/BlompieTV/NovaAPIServer.swift"
+        let serverFile = "\(Self.appSourceDir)/NovaAPIServer.swift"
         guard let content = try? String(contentsOfFile: serverFile, encoding: .utf8) else {
             XCTFail("Could not read NovaAPIServer.swift")
             return
@@ -384,7 +393,7 @@ final class SecurityTests: XCTestCase {
         // Verify no passwords or tokens are stored with obvious key names
         let sensitiveKeyPatterns = ["password", "token", "secret", "apiKey", "api_key"]
 
-        let sourceFiles = findSwiftFiles(in: "/Volumes/Data/xcode/BlompieTV/BlompieTV")
+        let sourceFiles = findSwiftFiles(in: Self.appSourceDir)
 
         for file in sourceFiles {
             guard let content = try? String(contentsOfFile: file, encoding: .utf8) else { continue }
@@ -404,6 +413,15 @@ final class SecurityTests: XCTestCase {
     }
 
     // MARK: - Helper
+
+    /// The app's source folder, found from this file's location (works in any checkout).
+    static let appSourceDir = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("BlompieTV").path
+
+    func testSourceFolderIsFound() {
+        XCTAssertFalse(findSwiftFiles(in: Self.appSourceDir).isEmpty, "security scans must actually scan something")
+    }
 
     private func findSwiftFiles(in directory: String) -> [String] {
         let fm = FileManager.default

@@ -7,18 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0278DE0461C94D42ED82F547 /* AIUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 267AFDA399CAA598D890B937 /* AIUnitTests.swift */; };
 		0563B127D26369B2B9DAAC00 /* NovaAPIServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524395903D2797666CF79AFF /* NovaAPIServer.swift */; };
-		AA10000000000000000000F2 /* ModelRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F1 /* ModelRegistry.swift */; };
-		AA10000000000000000000F4 /* OpenRouterProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F3 /* OpenRouterProvider.swift */; };
-		AA10000000000000000000F6 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F5 /* KeychainStore.swift */; };
-		AA10000000000000000000F8 /* LLMBalancerTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F7 /* LLMBalancerTypes.swift */; };
-		AA10000000000000000000FA /* LLMBalancerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F9 /* LLMBalancerManager.swift */; };
-		AA10000000000000000000FC /* LoadBalancerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000FB /* LoadBalancerTests.swift */; };
 		2CF7DCE6C1E3B55127E984E8 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C938DD3CAD73902FD5300880 /* Foundation.framework */; };
+		31B710C07C43458A04217EDE /* AITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6E91494F1A92A2AEF6CBA0 /* AITestSupport.swift */; };
 		32C02CE74724E4B77584C4AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C938DD3CAD73902FD5300880 /* Foundation.framework */; };
-		563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */; };
+		35A44AAB6321194577B3A0F6 /* RetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 850B193EF86446B2A9A912CB /* RetryTests.swift */; };
+		369F6EC3F2506858D773B79A /* AIFunctionalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53934DC87D72622F14963A92 /* AIFunctionalTests.swift */; };
+		44462F0033F8453CB561CE85 /* AIPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 477A8F0C534518D806A743C5 /* AIPerformanceTests.swift */; };
+		44F757B1795514FC36F85D9D /* AIFrameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE5A16E0F7D71E1BE46779B /* AIFrameTests.swift */; };
+		4F0861A1B59E742AC4512187 /* Retry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50142787052725EB083C1299 /* Retry.swift */; };
+		797F6C54BEF91A4C392FA5D0 /* AIIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 516DF8956B5B8A1B19B89D0D /* AIIntegrationTests.swift */; };
 		8ABDBCE98BD16EADD2B38008 /* ContentProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE4786FF89A926AE35291FF /* ContentProvider.swift */; };
-		9BAB2DF758C8BB3572AC0854 /* AIBackendStatusMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = C84E6B44E58233D43C2F5520 /* AIBackendStatusMenu.swift */; };
 		A07DB8894E0289A74BF1E14A /* TVServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D90FFE197A38DF859D10B9D /* TVServices.framework */; };
 		A1000001000000000000001 /* BlompieTVApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000001 /* BlompieTVApp.swift */; };
 		A1000003000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000000000000001 /* ContentView.swift */; };
@@ -29,6 +29,15 @@
 		A1000013000000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000014000000000000001 /* SettingsView.swift */; };
 		A1000015000000000000001 /* SaveLoadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016000000000000001 /* SaveLoadView.swift */; };
 		A1000017000000000000001 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018000000000000001 /* StatsView.swift */; };
+		A236E616FA481CB4BA9F2630 /* BlompieTVTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F686561741EEB883E9244711 /* BlompieTVTests.swift */; };
+		A274A18AA9C3E23CFFE88855 /* ScriptedNarrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A576450AD92F2D2BC7F29029 /* ScriptedNarrator.swift */; };
+		AA10000000000000000000F2 /* ModelRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F1 /* ModelRegistry.swift */; };
+		AA10000000000000000000F4 /* OpenRouterProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F3 /* OpenRouterProvider.swift */; };
+		AA10000000000000000000F6 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F5 /* KeychainStore.swift */; };
+		AA10000000000000000000F8 /* LLMBalancerTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F7 /* LLMBalancerTypes.swift */; };
+		AA10000000000000000000FA /* LLMBalancerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F9 /* LLMBalancerManager.swift */; };
+		AA10000000000000000000FC /* LoadBalancerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000FB /* LoadBalancerTests.swift */; };
+		AC1B9CA3EEA18FC3B7FDD66E /* AISecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116A0EA63138ED284AB77776 /* AISecurityTests.swift */; };
 		D750B11EE3CB51293DC9156D /* BlompieTVTopShelf in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 930897A61CDC11346EFEA01D /* BlompieTVTopShelf */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -64,18 +73,21 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		116A0EA63138ED284AB77776 /* AISecurityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AISecurityTests.swift; sourceTree = "<group>"; };
+		267AFDA399CAA598D890B937 /* AIUnitTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIUnitTests.swift; sourceTree = "<group>"; };
+		3E6E91494F1A92A2AEF6CBA0 /* AITestSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AITestSupport.swift; sourceTree = "<group>"; };
 		4343038DF333BD8468898015 /* BlompieTVTopShelf.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = BlompieTVTopShelf.entitlements; sourceTree = "<group>"; };
+		477A8F0C534518D806A743C5 /* AIPerformanceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIPerformanceTests.swift; sourceTree = "<group>"; };
+		50142787052725EB083C1299 /* Retry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Retry.swift; sourceTree = "<group>"; };
+		516DF8956B5B8A1B19B89D0D /* AIIntegrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIIntegrationTests.swift; sourceTree = "<group>"; };
 		524395903D2797666CF79AFF /* NovaAPIServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NovaAPIServer.swift; sourceTree = "<group>"; };
+		53934DC87D72622F14963A92 /* AIFunctionalTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIFunctionalTests.swift; sourceTree = "<group>"; };
 		6AE4786FF89A926AE35291FF /* ContentProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentProvider.swift; sourceTree = "<group>"; };
-		AA10000000000000000000F1 /* ModelRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRegistry.swift; sourceTree = "<group>"; };
-		AA10000000000000000000F3 /* OpenRouterProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterProvider.swift; sourceTree = "<group>"; };
-		AA10000000000000000000F5 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
-		AA10000000000000000000F7 /* LLMBalancerTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMBalancerTypes.swift; sourceTree = "<group>"; };
-		AA10000000000000000000F9 /* LLMBalancerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMBalancerManager.swift; sourceTree = "<group>"; };
-		AA10000000000000000000FB /* LoadBalancerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadBalancerTests.swift; sourceTree = "<group>"; };
 		7D90FFE197A38DF859D10B9D /* TVServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TVServices.framework; path = System/Library/Frameworks/TVServices.framework; sourceTree = SDKROOT; };
 		8276333B4DB28D7A72D2657B /* BlompieTVTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BlompieTVTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		850B193EF86446B2A9A912CB /* RetryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RetryTests.swift; sourceTree = "<group>"; };
 		930897A61CDC11346EFEA01D /* BlompieTVTopShelf */ = {isa = PBXFileReference; includeInIndex = 0; path = BlompieTVTopShelf; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AE5A16E0F7D71E1BE46779B /* AIFrameTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIFrameTests.swift; sourceTree = "<group>"; };
 		A1000002000000000000001 /* BlompieTVApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlompieTVApp.swift; sourceTree = "<group>"; };
 		A1000004000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A1000006000000000000001 /* GameEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameEngine.swift; sourceTree = "<group>"; };
@@ -86,10 +98,16 @@
 		A1000016000000000000001 /* SaveLoadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveLoadView.swift; sourceTree = "<group>"; };
 		A1000018000000000000001 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		A1000019000000000000001 /* BlompieTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BlompieTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A576450AD92F2D2BC7F29029 /* ScriptedNarrator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScriptedNarrator.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F1 /* ModelRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRegistry.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F3 /* OpenRouterProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterProvider.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F5 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F7 /* LLMBalancerTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMBalancerTypes.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F9 /* LLMBalancerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMBalancerManager.swift; sourceTree = "<group>"; };
+		AA10000000000000000000FB /* LoadBalancerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadBalancerTests.swift; sourceTree = "<group>"; };
 		BE3FD1CCBB939FCD9A810380 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AIBackendManager.swift; path = BlompieTV/Services/AIBackendManager.swift; sourceTree = "<group>"; };
-		C84E6B44E58233D43C2F5520 /* AIBackendStatusMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AIBackendStatusMenu.swift; path = BlompieTV/Services/AIBackendStatusMenu.swift; sourceTree = "<group>"; };
 		C938DD3CAD73902FD5300880 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		F686561741EEB883E9244711 /* BlompieTVTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BlompieTVTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -124,6 +142,15 @@
 			isa = PBXGroup;
 			children = (
 				AA10000000000000000000FB /* LoadBalancerTests.swift */,
+				F686561741EEB883E9244711 /* BlompieTVTests.swift */,
+				3E6E91494F1A92A2AEF6CBA0 /* AITestSupport.swift */,
+				850B193EF86446B2A9A912CB /* RetryTests.swift */,
+				267AFDA399CAA598D890B937 /* AIUnitTests.swift */,
+				516DF8956B5B8A1B19B89D0D /* AIIntegrationTests.swift */,
+				53934DC87D72622F14963A92 /* AIFunctionalTests.swift */,
+				477A8F0C534518D806A743C5 /* AIPerformanceTests.swift */,
+				116A0EA63138ED284AB77776 /* AISecurityTests.swift */,
+				9AE5A16E0F7D71E1BE46779B /* AIFrameTests.swift */,
 			);
 			name = BlompieTVTests;
 			path = BlompieTVTests;
@@ -136,7 +163,6 @@
 				A1000023000000000000001 /* Products */,
 				D3236B227083AFC9CB5EF3F2 /* Frameworks */,
 				D7DE2FF59756511484393DC1 /* BlompieTVTopShelf */,
-				FF6546DFC58B664969DCC774 /* AIBackend */,
 				1E37CD195E1035C64D0F25B5 /* BlompieTVTests */,
 			);
 			sourceTree = "<group>";
@@ -150,6 +176,7 @@
 				A1000025000000000000001 /* Views */,
 				A1000010000000000000001 /* Assets.xcassets */,
 				524395903D2797666CF79AFF /* NovaAPIServer.swift */,
+				A576450AD92F2D2BC7F29029 /* ScriptedNarrator.swift */,
 			);
 			path = BlompieTV;
 			sourceTree = "<group>";
@@ -174,6 +201,7 @@
 				AA10000000000000000000F5 /* KeychainStore.swift */,
 				AA10000000000000000000F7 /* LLMBalancerTypes.swift */,
 				AA10000000000000000000F9 /* LLMBalancerManager.swift */,
+				50142787052725EB083C1299 /* Retry.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -215,15 +243,6 @@
 				C938DD3CAD73902FD5300880 /* Foundation.framework */,
 			);
 			name = tvOS;
-			sourceTree = "<group>";
-		};
-		FF6546DFC58B664969DCC774 /* AIBackend */ = {
-			isa = PBXGroup;
-			children = (
-				C608FBC4C2B6E19646B67792 /* AIBackendManager.swift */,
-				C84E6B44E58233D43C2F5520 /* AIBackendStatusMenu.swift */,
-			);
-			name = AIBackend;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -364,14 +383,14 @@
 				A1000013000000000000001 /* SettingsView.swift in Sources */,
 				A1000015000000000000001 /* SaveLoadView.swift in Sources */,
 				A1000017000000000000001 /* StatsView.swift in Sources */,
-				563169114AB38E4C538EAFB0 /* AIBackendManager.swift in Sources */,
-				9BAB2DF758C8BB3572AC0854 /* AIBackendStatusMenu.swift in Sources */,
 				0563B127D26369B2B9DAAC00 /* NovaAPIServer.swift in Sources */,
 				AA10000000000000000000F2 /* ModelRegistry.swift in Sources */,
 				AA10000000000000000000F4 /* OpenRouterProvider.swift in Sources */,
 				AA10000000000000000000F6 /* KeychainStore.swift in Sources */,
 				AA10000000000000000000F8 /* LLMBalancerTypes.swift in Sources */,
 				AA10000000000000000000FA /* LLMBalancerManager.swift in Sources */,
+				4F0861A1B59E742AC4512187 /* Retry.swift in Sources */,
+				A274A18AA9C3E23CFFE88855 /* ScriptedNarrator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -380,6 +399,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA10000000000000000000FC /* LoadBalancerTests.swift in Sources */,
+				A236E616FA481CB4BA9F2630 /* BlompieTVTests.swift in Sources */,
+				31B710C07C43458A04217EDE /* AITestSupport.swift in Sources */,
+				35A44AAB6321194577B3A0F6 /* RetryTests.swift in Sources */,
+				0278DE0461C94D42ED82F547 /* AIUnitTests.swift in Sources */,
+				797F6C54BEF91A4C392FA5D0 /* AIIntegrationTests.swift in Sources */,
+				369F6EC3F2506858D773B79A /* AIFunctionalTests.swift in Sources */,
+				44462F0033F8453CB561CE85 /* AIPerformanceTests.swift in Sources */,
+				AC1B9CA3EEA18FC3B7FDD66E /* AISecurityTests.swift in Sources */,
+				44F757B1795514FC36F85D9D /* AIFrameTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -545,7 +573,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = BlompieTV/BlompieTV.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = QRRCB8HB3W;
 				ENABLE_PREVIEWS = YES;
@@ -558,7 +586,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jordankoch.BlompieTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -575,7 +603,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = BlompieTV/BlompieTV.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = QRRCB8HB3W;
 				ENABLE_PREVIEWS = YES;
@@ -588,7 +616,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jordankoch.BlompieTV;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

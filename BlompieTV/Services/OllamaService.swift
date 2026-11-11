@@ -2,7 +2,9 @@
 //  OllamaService.swift
 //  BlompieTV
 //
-//  Network service for communicating with Ollama and OpenWebUI
+//  Ollama wire types (also used by saved games) and the streaming client used
+//  when the active backend is Ollama. Endpoints, backend choice, failover and
+//  non-streaming calls live in LLMBalancerManager.
 //  Created by Jordan Koch on 2/2/2026.
 //  Copyright 2026 Jordan Koch. All rights reserved.
 //
@@ -98,253 +100,73 @@ enum OllamaError: Error, LocalizedError {
     }
 }
 
+/// Server kind found by `ServerDiscovery` on the LAN.
 enum AIServerType: String, Codable, CaseIterable {
     case ollama = "Ollama"
     case openwebui = "OpenWebUI"
+
+    /// The canonical backend this server is configured as.
+    var backend: LLMBackendType {
+        switch self {
+        case .ollama: return .ollama
+        case .openwebui: return .openWebUI
+        }
+    }
 }
 
-@MainActor
-class OllamaService: ObservableObject {
-    @Published var serverAddress: String = "" {
-        didSet {
-            UserDefaults.standard.set(serverAddress, forKey: "BlompieTVServerAddress")
-        }
-    }
-    @Published var serverPort: Int = 11434 {
-        didSet {
-            UserDefaults.standard.set(serverPort, forKey: "BlompieTVServerPort")
-        }
-    }
-    @Published var serverType: AIServerType = .ollama {
-        didSet {
-            UserDefaults.standard.set(serverType.rawValue, forKey: "BlompieTVServerType")
-        }
-    }
-    @Published var isConnected: Bool = false
-    @Published var connectionStatus: String = "Not configured"
+/// Streams an Ollama `/api/chat` reply; `onChunk` gets the text so far and the
+/// full reply is returned. Stateless: the caller
+/// passes the base URL and model from `LLMBalancerManager`.
+struct OllamaService {
+    var timeout: TimeInterval = 120
 
-    var model: String = "mistral"
-    var temperature: Double = 0.7
-    var maxTokens: Int? = nil
-
-    var baseURL: String {
-        guard !serverAddress.isEmpty else { return "" }
-        return "http://\(serverAddress):\(serverPort)"
-    }
-
-    // Custom URLSession with extended timeout for model loading
-    private lazy var urlSession: URLSession = {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 300 // 5 minutes for request
-        config.timeoutIntervalForResource = 600 // 10 minutes for resource
-        return URLSession(configuration: config)
-    }()
-
-    init() {
-        loadSettings()
-    }
-
-    private func loadSettings() {
-        if let address = UserDefaults.standard.string(forKey: "BlompieTVServerAddress") {
-            serverAddress = address
-        }
-        serverPort = UserDefaults.standard.integer(forKey: "BlompieTVServerPort")
-        if serverPort == 0 { serverPort = 11434 }
-
-        if let typeString = UserDefaults.standard.string(forKey: "BlompieTVServerType"),
-           let type = AIServerType(rawValue: typeString) {
-            serverType = type
-        }
-
-        if !serverAddress.isEmpty {
-            Task {
-                await checkConnection()
-            }
-        }
-    }
-
-    func checkConnection() async {
-        guard !serverAddress.isEmpty else {
-            connectionStatus = "Not configured"
-            isConnected = false
-            return
-        }
-
-        connectionStatus = "Connecting..."
-
-        do {
-            let _ = try await fetchInstalledModels()
-            isConnected = true
-            connectionStatus = "Connected to \(serverType.rawValue)"
-        } catch {
-            isConnected = false
-            connectionStatus = "Connection failed"
-        }
-    }
-
-    func fetchInstalledModels() async throws -> [String] {
-        guard !baseURL.isEmpty else {
+    func chatStreaming(
+        baseURL: String,
+        model: String,
+        temperature: Double,
+        maxTokens: Int? = nil,
+        messages: [OllamaMessage],
+        onChunk: @escaping (String) -> Void,
+        onComplete: @escaping (Double?) -> Void
+    ) async throws -> String {
+        guard LLMBalancerManager.isValidEndpoint(baseURL, requireHTTPS: false),
+              let url = URL(string: "\(baseURL)/api/chat") else {
             throw OllamaError.noServerConfigured
-        }
-
-        let endpoint: String
-        switch serverType {
-        case .ollama:
-            endpoint = "\(baseURL)/api/tags"
-        case .openwebui:
-            endpoint = "\(baseURL)/api/models"
-        }
-
-        guard let url = URL(string: endpoint) else {
-            throw OllamaError.invalidURL
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-
-        do {
-            let (data, response) = try await urlSession.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw OllamaError.invalidResponse(statusCode: nil, body: nil)
-            }
-
-            guard (200...299).contains(httpResponse.statusCode) else {
-                throw OllamaError.invalidResponse(statusCode: httpResponse.statusCode, body: nil)
-            }
-
-            switch serverType {
-            case .ollama:
-                let modelsResponse = try JSONDecoder().decode(OllamaModelsResponse.self, from: data)
-                return modelsResponse.models.map { $0.name }
-            case .openwebui:
-                let modelsResponse = try JSONDecoder().decode(OpenWebUIModelsResponse.self, from: data)
-                return modelsResponse.allModels.map { $0.id }
-            }
-
-        } catch let error as OllamaError {
-            throw error
-        } catch {
-            throw OllamaError.networkError(error)
-        }
-    }
-
-    func chatStreaming(messages: [OllamaMessage], onChunk: @escaping (String) -> Void, onComplete: @escaping (Double?) -> Void) async throws {
-        guard !baseURL.isEmpty else {
-            throw OllamaError.noServerConfigured
-        }
-
-        let endpoint: String
-        switch serverType {
-        case .ollama:
-            endpoint = "\(baseURL)/api/chat"
-        case .openwebui:
-            endpoint = "\(baseURL)/api/chat/completions"
-        }
-
-        guard let url = URL(string: endpoint) else {
-            throw OllamaError.invalidURL
         }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let chatRequest = OllamaChatRequest(
+        request.httpBody = try JSONEncoder().encode(OllamaChatRequest(
             model: model,
             messages: messages,
             stream: true,
             options: OllamaOptions(temperature: temperature, num_predict: maxTokens)
-        )
-
-        request.httpBody = try JSONEncoder().encode(chatRequest)
+        ))
 
         do {
-            let (asyncBytes, response) = try await urlSession.bytes(for: request)
+            let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw OllamaError.invalidResponse(statusCode: nil, body: nil)
             }
-
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw OllamaError.invalidResponse(statusCode: httpResponse.statusCode, body: nil)
             }
 
-            var buffer = ""
             var lastResponse: OllamaChatResponse?
-            for try await byte in asyncBytes {
-                let char = Character(UnicodeScalar(byte))
-                buffer.append(char)
-
-                if char == "\n" {
-                    if let data = buffer.data(using: .utf8),
-                       let streamResponse = try? JSONDecoder().decode(OllamaChatResponse.self, from: data) {
-                        onChunk(streamResponse.message.content)
-                        lastResponse = streamResponse
-                    }
-                    buffer = ""
+            var full = ""
+            for try await line in asyncBytes.lines {
+                if let data = line.data(using: .utf8),
+                   let chunk = try? JSONDecoder().decode(OllamaChatResponse.self, from: data) {
+                    full += chunk.message.content
+                    onChunk(full)
+                    lastResponse = chunk
                 }
             }
-
-            // Call completion handler with token/second metrics
             onComplete(lastResponse?.tokensPerSecond)
-
-        } catch let error as OllamaError {
-            throw error
-        } catch {
-            throw OllamaError.networkError(error)
-        }
-    }
-
-    func chat(messages: [OllamaMessage]) async throws -> String {
-        guard !baseURL.isEmpty else {
-            throw OllamaError.noServerConfigured
-        }
-
-        let endpoint: String
-        switch serverType {
-        case .ollama:
-            endpoint = "\(baseURL)/api/chat"
-        case .openwebui:
-            endpoint = "\(baseURL)/api/chat/completions"
-        }
-
-        guard let url = URL(string: endpoint) else {
-            throw OllamaError.invalidURL
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let chatRequest = OllamaChatRequest(
-            model: model,
-            messages: messages,
-            stream: false,
-            options: OllamaOptions(temperature: temperature, num_predict: maxTokens)
-        )
-
-        request.httpBody = try JSONEncoder().encode(chatRequest)
-
-        do {
-            let (data, response) = try await urlSession.data(for: request)
-            let bodyString = String(data: data, encoding: .utf8)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw OllamaError.invalidResponse(statusCode: nil, body: bodyString)
-            }
-
-            guard (200...299).contains(httpResponse.statusCode) else {
-                throw OllamaError.invalidResponse(statusCode: httpResponse.statusCode, body: bodyString)
-            }
-
-            do {
-                let chatResponse = try JSONDecoder().decode(OllamaChatResponse.self, from: data)
-                return chatResponse.message.content
-            } catch let decodingError as DecodingError {
-                throw OllamaError.decodingError(decodingError, responseBody: bodyString)
-            }
-
+            return full
         } catch let error as OllamaError {
             throw error
         } catch {

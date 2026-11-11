@@ -212,6 +212,6 @@ final class LoadBalancerTests: XCTestCase {
         XCTAssertEqual(LLMBackendType.novaGateway.displayName, "Nova Gateway")
         XCTAssertEqual(LLMBackendType.novaGateway.defaultURL, "http://127.0.0.1:18792")
         XCTAssertFalse(LLMBackendType.novaGateway.icon.isEmpty)
-        XCTAssertEqual(LLMBackendType.allCases.count, 8)
+        XCTAssertEqual(LLMBackendType.allCases.count, 9)
     }
 }

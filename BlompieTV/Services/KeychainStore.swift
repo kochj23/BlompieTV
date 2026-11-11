@@ -1,6 +1,6 @@
 //
 //  KeychainStore.swift
-//  AIStudio
+//  BlompieTV (originally from AIStudio)
 //
 //  Created by Jordan Koch on 2026-02-19.
 //  Copyright © 2026 Jordan Koch. All rights reserved.
@@ -9,12 +9,11 @@
 import Foundation
 import Security
 
-/// Minimal macOS Keychain wrapper for storing secrets (e.g. API keys).
+/// Minimal Keychain wrapper for storing secrets (e.g. API keys).
 ///
-/// Secrets are stored as classic generic-password items in the login keychain so
-/// that the round-trip works in unsigned/unsandboxed unit-test processes (no
-/// data-protection keychain, which would require entitlements). Never store
-/// secrets in UserDefaults.
+/// Secrets are generic-password items under this app's own service name
+/// (`com.jordankoch.BlompieTV.<provider>`). Never store secrets in UserDefaults,
+/// files or environment variables.
 struct KeychainStore {
     let service: String
     let account: String
@@ -35,18 +34,21 @@ struct KeychainStore {
         ]
     }
 
-    /// Store (or replace) a secret. Returns true on success.
+    /// Store (or replace) a secret. Updates in place when an item exists so its
+    /// access settings are kept. Returns true on success.
     @discardableResult
     func set(_ value: String) -> Bool {
         guard let data = value.data(using: .utf8) else { return false }
 
-        // Remove any existing item first so we can cleanly re-add.
-        SecItemDelete(baseQuery as CFDictionary)
+        let update: [String: Any] = [kSecValueData as String: data]
+        let status = SecItemUpdate(baseQuery as CFDictionary, update as CFDictionary)
+        if status == errSecSuccess { return true }
+        guard status == errSecItemNotFound else { return false }
 
         var attributes = baseQuery
         attributes[kSecValueData as String] = data
-        let status = SecItemAdd(attributes as CFDictionary, nil)
-        return status == errSecSuccess
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        return SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess
     }
 
     /// Retrieve a secret, or nil if none is stored.
@@ -76,5 +78,17 @@ struct KeychainStore {
     var hasValue: Bool {
         guard let value = get() else { return false }
         return !value.isEmpty
+    }
+
+    /// One-time migration from an older service name: if this store is empty and
+    /// `legacy` holds a non-empty secret, copy it here and remove the legacy item.
+    /// Returns true when a secret was migrated. Never logs the secret.
+    @discardableResult
+    func migrate(from legacy: KeychainStore) -> Bool {
+        guard legacy.service != service || legacy.account != account else { return false }
+        guard !hasValue, let old = legacy.get(), !old.isEmpty else { return false }
+        guard set(old) else { return false }
+        legacy.delete()
+        return true
     }
 }

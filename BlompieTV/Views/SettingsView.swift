@@ -13,16 +13,27 @@ struct SettingsView: View {
     @ObservedObject var gameEngine: GameEngine
     @Binding var isPresented: Bool
     @StateObject private var serverDiscovery = ServerDiscovery()
-    @State private var manualAddress: String = ""
-    @State private var manualPort: String = ""
-    @State private var selectedTab = 0
-    @State private var selectedServerType: AIServerType = .ollama
-    @StateObject private var balancer = LLMBalancerManager.shared
+    @State private var selectedTab: Int
     @State private var openRouterKeyInput: String = ""
-    @State private var openRouterKeySaved = false
+    @State private var openAIKeyInput: String = ""
+
+    private var balancer: LLMBalancerManager { gameEngine.ai }
+
+    /// Tabs: 0 AI, 1 Game, 2 Model, 3 Cloud.
+    init(gameEngine: GameEngine, isPresented: Binding<Bool>, initialTab: Int = 0) {
+        self.gameEngine = gameEngine
+        self._isPresented = isPresented
+        self._selectedTab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         NavigationStack {
+            content
+        }
+    }
+
+    /// Everything inside the navigation container (rendered directly by frame tests).
+    var content: some View {
             ZStack {
                 TVBackground()
                     .ignoresSafeArea()
@@ -35,7 +46,7 @@ struct SettingsView: View {
 
                     // Tab picker
                     Picker("Settings Section", selection: $selectedTab) {
-                        Text("Server").tag(0)
+                        Text("AI").tag(0)
                         Text("Game").tag(1)
                         Text("Model").tag(2)
                         Text("Cloud").tag(3)
@@ -44,18 +55,8 @@ struct SettingsView: View {
                     .padding(.horizontal, 200)
 
                     ScrollView {
-                        VStack(spacing: 30) {
-                            if selectedTab == 0 {
-                                serverSettingsSection
-                            } else if selectedTab == 1 {
-                                gameSettingsSection
-                            } else if selectedTab == 2 {
-                                modelSettingsSection
-                            } else {
-                                cloudSettingsSection
-                            }
-                        }
-                        .padding(40)
+                        section(for: selectedTab)
+                            .padding(40)
                     }
 
                     // Done button
@@ -66,91 +67,142 @@ struct SettingsView: View {
                     .padding(.bottom, 40)
                 }
             }
-        }
-        .onAppear {
-            manualAddress = gameEngine.ollamaService.serverAddress
-            manualPort = String(gameEngine.ollamaService.serverPort)
-            selectedServerType = gameEngine.ollamaService.serverType
+    }
+
+    /// The cards of one tab (0 AI, 1 Game, 2 Model, 3 Cloud).
+    @ViewBuilder
+    func section(for tab: Int) -> some View {
+        VStack(spacing: 30) {
+            switch tab {
+            case 0: aiSettingsSection
+            case 1: gameSettingsSection
+            case 2: modelSettingsSection
+            default: cloudSettingsSection
+            }
         }
     }
 
-    // MARK: - Server Settings
+    // MARK: - AI Settings
 
-    private var serverSettingsSection: some View {
+    private var aiSettingsSection: some View {
         VStack(spacing: 30) {
-            // Connection status
+            // Global AI switch
+            VStack(alignment: .leading, spacing: 20) {
+                Toggle("Use AI narrator", isOn: $gameEngine.aiEnabled)
+                    .font(.system(size: 26, design: .monospaced))
+                    .tint(TVColors.cyan)
+                    .onChange(of: gameEngine.aiEnabled) { _, _ in
+                        gameEngine.saveSettings()
+                    }
+                Text("Off: every turn is told by the built-in scripted narrator and nothing is sent over the network. On: if no backend answers, the scripted narrator steps in for that turn.")
+                    .font(.system(size: 20, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            .foregroundColor(.white)
+            .padding(30)
+            .background(settingsCardBackground)
+
+            // Status + test
             HStack(spacing: 20) {
                 Circle()
-                    .fill(gameEngine.ollamaService.isConnected ? Color.green : Color.red)
+                    .fill(statusColor)
                     .frame(width: 24, height: 24)
 
-                Text(gameEngine.ollamaService.connectionStatus)
-                    .font(.system(size: 28, design: .monospaced))
-                    .foregroundColor(.white)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(gameEngine.aiEnabled ? balancer.statusText : "AI off")
+                        .font(.system(size: 28, design: .monospaced))
+                        .foregroundColor(.white)
+                    Text("Backend: \(balancer.selectedBackend.displayName)")
+                        .font(.system(size: 20, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.6))
+                }
 
                 Spacer()
 
-                Button("Test Connection") {
+                Button(balancer.isCheckingStatus ? "Testing..." : "Test Connection") {
                     Task {
-                        await gameEngine.ollamaService.checkConnection()
+                        await balancer.refreshStatus()
+                        await gameEngine.refreshAvailableModels()
                     }
                 }
                 .buttonStyle(TVSecondaryButtonStyle())
+                .disabled(balancer.isCheckingStatus)
             }
             .padding(30)
             .background(settingsCardBackground)
 
-            // Server Type
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Server Type")
+            // Backend picker
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Backend")
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
 
-                Picker("Server Type", selection: $selectedServerType) {
-                    ForEach(AIServerType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: selectedServerType) { _, newValue in
-                    gameEngine.ollamaService.serverType = newValue
-                }
-            }
-            .padding(30)
-            .background(settingsCardBackground)
-
-            // Manual Configuration
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Server Address")
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
-
-                HStack(spacing: 20) {
-                    TextField("IP Address (e.g., 192.168.1.100)", text: $manualAddress)
-                        .textFieldStyle(TVTextFieldStyle())
-
-                    Text(":")
-                        .font(.system(size: 28, design: .monospaced))
-                        .foregroundColor(.white)
-
-                    TextField("Port", text: $manualPort)
-                        .textFieldStyle(TVTextFieldStyle())
-                        .frame(width: 150)
-
-                    Button("Save") {
-                        gameEngine.ollamaService.serverAddress = manualAddress
-                        gameEngine.ollamaService.serverPort = Int(manualPort) ?? 11434
+                ForEach(LLMBackendType.pickerCases, id: \.self) { backend in
+                    Button(action: {
+                        balancer.selectedBackend = backend
                         Task {
-                            await gameEngine.ollamaService.checkConnection()
+                            await balancer.refreshStatus()
                             await gameEngine.refreshAvailableModels()
                         }
+                    }) {
+                        HStack(spacing: 16) {
+                            Image(systemName: backend.icon)
+                                .foregroundColor(TVColors.cyan)
+                                .frame(width: 36)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(backend.displayName)
+                                    .font(.system(size: 24, design: .monospaced))
+                                    .foregroundColor(.white)
+                                Text(backend.description)
+                                    .font(.system(size: 17, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.55))
+                                    .lineLimit(2)
+                            }
+                            Spacer()
+                            if backend != .auto {
+                                Circle()
+                                    .fill(healthColor(backend))
+                                    .frame(width: 14, height: 14)
+                            }
+                            if backend == balancer.selectedBackend {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(TVColors.cyan)
+                                    .font(.system(size: 28))
+                            }
+                        }
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(backend == balancer.selectedBackend ? TVColors.cyan.opacity(0.2) : Color.white.opacity(0.05))
+                        )
                     }
-                    .buttonStyle(TVSecondaryButtonStyle())
+                    .buttonStyle(TVButtonStyle())
                 }
+            }
+            .padding(30)
+            .background(settingsCardBackground)
 
-                Text("Default ports: Ollama = 11434, OpenWebUI = 3000 or 8080")
+            // Endpoint URLs
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Endpoints")
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+                Text("Use your Mac's or server's LAN address, e.g. http://192.168.1.20:11434. localhost means the Apple TV itself.")
                     .font(.system(size: 20, design: .monospaced))
                     .foregroundColor(.white.opacity(0.6))
+
+                endpointField("Ollama", text: binding(for: .ollama))
+                endpointField("TinyLLM", text: binding(for: .tinyLLM))
+                endpointField("TinyChat", text: binding(for: .tinyChat))
+                endpointField("OpenWebUI", text: binding(for: .openWebUI))
+                endpointField("Nova Gateway", text: binding(for: .novaGateway))
+                endpointField("OpenAI (https)", text: binding(for: .openAI))
+
+                if !LLMBalancerManager.isValidEndpoint(balancer.url(for: .openAI), requireHTTPS: true) {
+                    Text("The OpenAI URL must start with https:// - keys are never sent over http.")
+                        .font(.system(size: 20, design: .monospaced))
+                        .foregroundColor(.orange)
+                }
             }
             .padding(30)
             .background(settingsCardBackground)
@@ -188,14 +240,10 @@ struct SettingsView: View {
 
                     ForEach(serverDiscovery.discoveredServers) { server in
                         Button(action: {
-                            gameEngine.ollamaService.serverAddress = server.host
-                            gameEngine.ollamaService.serverPort = server.port
-                            gameEngine.ollamaService.serverType = server.type
-                            manualAddress = server.host
-                            manualPort = String(server.port)
-                            selectedServerType = server.type
+                            balancer.setURL("http://\(server.host):\(server.port)", for: server.type.backend)
+                            balancer.selectedBackend = server.type.backend
                             Task {
-                                await gameEngine.ollamaService.checkConnection()
+                                await balancer.refreshStatus()
                                 await gameEngine.refreshAvailableModels()
                             }
                         }) {
@@ -212,7 +260,7 @@ struct SettingsView: View {
 
                                 Spacer()
 
-                                Text("Select")
+                                Text("Use")
                                     .foregroundColor(TVColors.cyan)
                             }
                             .padding(20)
@@ -224,13 +272,41 @@ struct SettingsView: View {
                         .buttonStyle(TVButtonStyle())
                     }
                 } else if !serverDiscovery.isSearching {
-                    Text("No servers found. Make sure Ollama or OpenWebUI is running on your network.")
+                    Text("No servers found yet. Scan finds Ollama and OpenWebUI on your network.")
                         .font(.system(size: 20, design: .monospaced))
                         .foregroundColor(.white.opacity(0.5))
                 }
             }
             .padding(30)
             .background(settingsCardBackground)
+        }
+    }
+
+    private var statusColor: Color {
+        guard gameEngine.aiEnabled else { return .gray }
+        return balancer.activeBackend != nil ? .green : .orange
+    }
+
+    private func healthColor(_ backend: LLMBackendType) -> Color {
+        switch balancer.backendHealth[backend] {
+        case .some(true): return .green
+        case .some(false): return .red
+        case .none: return .gray
+        }
+    }
+
+    private func binding(for backend: LLMBackendType) -> Binding<String> {
+        Binding(get: { balancer.url(for: backend) }, set: { balancer.setURL($0, for: backend) })
+    }
+
+    private func endpointField(_ label: String, text: Binding<String>) -> some View {
+        HStack(spacing: 20) {
+            Text(label)
+                .font(.system(size: 22, design: .monospaced))
+                .foregroundColor(.white.opacity(0.8))
+                .frame(width: 260, alignment: .leading)
+            TextField(label, text: text)
+                .textFieldStyle(TVTextFieldStyle())
         }
     }
 
@@ -352,7 +428,7 @@ struct SettingsView: View {
             // Model Selection
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
-                    Text("AI Model")
+                    Text("AI Model (\(balancer.modelPickerBackend.displayName))")
                         .font(.system(size: 28, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
 
@@ -367,7 +443,7 @@ struct SettingsView: View {
                 }
 
                 if gameEngine.availableModels.isEmpty {
-                    Text("Connect to a server to see available models")
+                    Text("Test the connection in the AI tab to list models")
                         .font(.system(size: 22, design: .monospaced))
                         .foregroundColor(.white.opacity(0.5))
                 } else {
@@ -489,15 +565,15 @@ struct SettingsView: View {
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
 
-                Text("Off by default — BlompieTV stays 100% local. Turn these on to spread each turn across more models. All backends are plain HTTP calls.")
+                Text("Off by default. Turn these on to spread each turn across more models. If the pool fails, the backend chosen in the AI tab is used, then the scripted narrator.")
                     .font(.system(size: 20, design: .monospaced))
                     .foregroundColor(.white.opacity(0.6))
 
-                Toggle("All Local Models (Ollama)", isOn: $balancer.useAllLocalModels)
+                Toggle("All Local Models (Ollama)", isOn: Binding(get: { balancer.useAllLocalModels }, set: { balancer.useAllLocalModels = $0 }))
                     .font(.system(size: 26, design: .monospaced))
                     .tint(TVColors.cyan)
 
-                Toggle("All Frontier Models (OpenRouter)", isOn: $balancer.enableAllFrontierModels)
+                Toggle("All Frontier Models (OpenRouter)", isOn: Binding(get: { balancer.enableAllFrontierModels }, set: { balancer.enableAllFrontierModels = $0 }))
                     .font(.system(size: 26, design: .monospaced))
                     .tint(TVColors.cyan)
 
@@ -507,7 +583,7 @@ struct SettingsView: View {
                         .foregroundColor(.orange)
                 }
 
-                Toggle("Nova Gateway (optional)", isOn: $balancer.useNovaGateway)
+                Toggle("Nova Gateway (optional)", isOn: Binding(get: { balancer.useNovaGateway }, set: { balancer.useNovaGateway = $0 }))
                     .font(.system(size: 26, design: .monospaced))
                     .tint(TVColors.cyan)
 
@@ -519,59 +595,29 @@ struct SettingsView: View {
             .padding(30)
             .background(settingsCardBackground)
 
-            // OpenRouter API key (Keychain-backed)
-            VStack(alignment: .leading, spacing: 20) {
-                HStack {
-                    Text("OpenRouter API Key")
-                        .font(.system(size: 28, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+            // API keys (Keychain-backed)
+            apiKeyCard(
+                title: "OpenRouter API Key",
+                placeholder: "sk-or-...",
+                backend: .openRouter,
+                input: $openRouterKeyInput
+            )
+            apiKeyCard(
+                title: "OpenAI API Key",
+                placeholder: "sk-...",
+                backend: .openAI,
+                input: $openAIKeyInput
+            )
 
-                    Spacer()
-
-                    Circle()
-                        .fill(balancer.hasOpenRouterKey ? Color.green : Color.gray)
-                        .frame(width: 20, height: 20)
-
-                    Text(balancer.hasOpenRouterKey ? "Stored" : "Not set")
-                        .font(.system(size: 22, design: .monospaced))
-                        .foregroundColor(balancer.hasOpenRouterKey ? .green : .white.opacity(0.5))
-                }
-
-                HStack(spacing: 20) {
-                    SecureField("sk-or-...", text: $openRouterKeyInput)
-                        .textFieldStyle(TVTextFieldStyle())
-
-                    Button("Save") {
-                        balancer.setOpenRouterKey(openRouterKeyInput)
-                        openRouterKeyInput = ""
-                        openRouterKeySaved = true
-                        Task { await balancer.refreshOpenRouterModels() }
-                    }
-                    .buttonStyle(TVSecondaryButtonStyle())
-
-                    Button("Clear") {
-                        balancer.setOpenRouterKey("")
-                        openRouterKeyInput = ""
-                        openRouterKeySaved = false
-                    }
-                    .buttonStyle(TVDestructiveButtonStyle())
-                }
-
-                Text("Stored securely in the tvOS Keychain — never in UserDefaults or on disk.")
-                    .font(.system(size: 20, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            .padding(30)
-            .background(settingsCardBackground)
-
-            // Nova Gateway endpoint + status
+            // Nova Gateway status
             VStack(alignment: .leading, spacing: 20) {
                 Text("Nova Gateway")
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
                     .foregroundColor(.white)
 
-                TextField("Nova URL", text: $balancer.novaGatewayURL)
-                    .textFieldStyle(TVTextFieldStyle())
+                Text(balancer.url(for: .novaGateway))
+                    .font(.system(size: 20, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.6))
 
                 HStack {
                     Circle()
@@ -626,6 +672,56 @@ struct SettingsView: View {
             .padding(30)
             .background(settingsCardBackground)
         }
+    }
+
+    /// Key entry on tvOS: selecting the SecureField opens the system on-screen
+    /// keyboard; with an iPhone signed in to the same Apple Account, the
+    /// "Apple TV Keyboard" notification lets you type or paste the key on the phone.
+    private func apiKeyCard(title: String, placeholder: String, backend: LLMBackendType, input: Binding<String>) -> some View {
+        let stored = balancer.hasAPIKey(for: backend)
+        return VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundColor(.white)
+
+                Spacer()
+
+                Circle()
+                    .fill(stored ? Color.green : Color.gray)
+                    .frame(width: 20, height: 20)
+
+                Text(stored ? "Stored" : "Not set")
+                    .font(.system(size: 22, design: .monospaced))
+                    .foregroundColor(stored ? .green : .white.opacity(0.5))
+            }
+
+            HStack(spacing: 20) {
+                SecureField(placeholder, text: input)
+                    .textFieldStyle(TVTextFieldStyle())
+
+                Button("Save") {
+                    balancer.setAPIKey(input.wrappedValue, for: backend)
+                    input.wrappedValue = ""
+                    if backend == .openRouter {
+                        Task { await balancer.refreshOpenRouterModels() }
+                    }
+                }
+                .buttonStyle(TVSecondaryButtonStyle())
+
+                Button("Clear") {
+                    balancer.setAPIKey("", for: backend)
+                    input.wrappedValue = ""
+                }
+                .buttonStyle(TVDestructiveButtonStyle())
+            }
+
+            Text("Select the field to open the on-screen keyboard. Easier: an iPhone on the same Apple Account shows an Apple TV Keyboard notification, so you can type or paste the key there. Stored only in the Apple TV Keychain, sent only over https.")
+                .font(.system(size: 20, design: .monospaced))
+                .foregroundColor(.white.opacity(0.6))
+        }
+        .padding(30)
+        .background(settingsCardBackground)
     }
 
     private var settingsCardBackground: some View {

@@ -35,14 +35,6 @@ struct ContentView: View {
             .sheet(isPresented: $showStats) {
                 StatsView(gameEngine: gameEngine, isPresented: $showStats)
             }
-            .alert("Error", isPresented: $gameEngine.showError) {
-                Button("OK", role: .cancel) {}
-                Button("Open Settings") {
-                    showSettings = true
-                }
-            } message: {
-                Text(gameEngine.errorMessage)
-            }
         }
     }
 
@@ -67,12 +59,9 @@ struct ContentView: View {
 
     private func handleOnAppear() {
         gameEngine.loadGame(fromSlot: "autosave")
+        // Always playable: with no AI reachable the scripted narrator runs.
         if gameEngine.messages.isEmpty {
-            if gameEngine.ollamaService.serverAddress.isEmpty {
-                showSettings = true
-            } else {
-                gameEngine.startNewGame()
-            }
+            gameEngine.startNewGame()
         }
     }
 }
@@ -90,23 +79,11 @@ struct HeaderView: View {
 
             Spacer()
 
-            connectionStatus
+            NarratorStatusView(gameEngine: gameEngine)
             tokenSpeed
         }
         .padding(.horizontal, 60)
         .padding(.top, 40)
-    }
-
-    private var connectionStatus: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(gameEngine.ollamaService.isConnected ? Color.green : Color.red)
-                .frame(width: 16, height: 16)
-
-            Text(gameEngine.ollamaService.connectionStatus)
-                .font(.system(size: 24, design: .monospaced))
-                .foregroundColor(.white.opacity(0.8))
-        }
     }
 
     @ViewBuilder
@@ -119,6 +96,59 @@ struct HeaderView: View {
                 .padding(.vertical, 8)
                 .background(TVColors.cyan.opacity(0.2))
                 .cornerRadius(12)
+        }
+    }
+}
+
+// MARK: - Narrator Status
+
+/// Header indicator: is the AI on, which backend answered, is it reachable,
+/// and did the last turn come from the AI or the scripted narrator.
+struct NarratorStatusView: View {
+    @ObservedObject var gameEngine: GameEngine
+
+    enum Status: Equatable { case off, online(String), offline }
+
+    var status: Status {
+        guard gameEngine.aiEnabled else { return .off }
+        if let backend = gameEngine.ai.activeBackend, gameEngine.ai.backendHealth[backend] == true {
+            return .online(backend.displayName)
+        }
+        return .offline
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(dotColor)
+                .frame(width: 16, height: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 24, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.85))
+                if !gameEngine.lastNarrationSource.label.isEmpty {
+                    Text("Last turn: \(gameEngine.lastNarrationSource.label)")
+                        .font(.system(size: 18, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.55))
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var title: String {
+        switch status {
+        case .off: return "AI off - scripted narrator"
+        case .online(let name): return "Narrator: \(name) online"
+        case .offline: return "AI unreachable - scripted fallback"
+        }
+    }
+
+    private var dotColor: Color {
+        switch status {
+        case .off: return .gray
+        case .online: return .green
+        case .offline: return .orange
         }
     }
 }
@@ -343,7 +373,7 @@ struct ToolbarView: View {
     }
 
     private var modelIndicator: some View {
-        Text("Model: \(gameEngine.selectedModel)")
+        Text(gameEngine.aiEnabled ? "Model: \(gameEngine.selectedModel)" : "Model: scripted")
             .font(.system(size: 22, design: .monospaced))
             .foregroundColor(.white.opacity(0.6))
     }
